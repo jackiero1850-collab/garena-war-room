@@ -72,6 +72,7 @@ export type Database = {
       }
       assignments: {
         Row: {
+          assigned_to: string | null
           cover_image_url: string | null
           created_at: string
           created_by: string | null
@@ -85,6 +86,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -98,6 +100,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
@@ -110,7 +113,15 @@ export type Database = {
           updated_at?: string
           website?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "assignments_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "team_members"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       daily_stats: {
         Row: {

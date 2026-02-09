@@ -15,6 +15,7 @@ import Settings from "@/pages/Settings";
 import Assignments from "@/pages/Assignments";
 import GraphicBriefs from "@/pages/GraphicBriefs";
 import Resources from "@/pages/Resources";
+import TeamPerformance from "@/pages/TeamPerformance";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -58,6 +59,7 @@ const App = () => (
             <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
             <Route path="/briefs" element={<ProtectedRoute><GraphicBriefs /></ProtectedRoute>} />
             <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
+            <Route path="/team-performance" element={<ProtectedRoute><TeamPerformance /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
