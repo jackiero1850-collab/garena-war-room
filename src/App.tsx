@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
 import DailyInput from "@/pages/DailyInput";
 import UserManagement from "@/pages/UserManagement";
+import TeamRoster from "@/pages/TeamRoster";
 import Settings from "@/pages/Settings";
 import Assignments from "@/pages/Assignments";
 import GraphicBriefs from "@/pages/GraphicBriefs";
@@ -49,6 +50,7 @@ const App = () => (
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/daily-input" element={<ProtectedRoute><DailyInput /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
+            <Route path="/roster" element={<ProtectedRoute><TeamRoster /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
             <Route path="/briefs" element={<ProtectedRoute><GraphicBriefs /></ProtectedRoute>} />

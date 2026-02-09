@@ -51,6 +51,7 @@ export type Database = {
       }
       assignments: {
         Row: {
+          cover_image_url: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -60,8 +61,10 @@ export type Database = {
           title: string
           type: Database["public"]["Enums"]["assignment_type"]
           updated_at: string
+          website: string | null
         }
         Insert: {
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -71,8 +74,10 @@ export type Database = {
           title: string
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
+          website?: string | null
         }
         Update: {
+          cover_image_url?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -82,6 +87,7 @@ export type Database = {
           title?: string
           type?: Database["public"]["Enums"]["assignment_type"]
           updated_at?: string
+          website?: string | null
         }
         Relationships: []
       }
@@ -96,6 +102,7 @@ export type Database = {
           id: string
           signups_count: number
           team_id: string | null
+          team_member_id: string | null
           total_deposit_amount: number
           updated_at: string
           user_id: string
@@ -111,6 +118,7 @@ export type Database = {
           id?: string
           signups_count?: number
           team_id?: string | null
+          team_member_id?: string | null
           total_deposit_amount?: number
           updated_at?: string
           user_id: string
@@ -126,6 +134,7 @@ export type Database = {
           id?: string
           signups_count?: number
           team_id?: string | null
+          team_member_id?: string | null
           total_deposit_amount?: number
           updated_at?: string
           user_id?: string
@@ -137,6 +146,13 @@ export type Database = {
             columns: ["team_id"]
             isOneToOne: false
             referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_stats_team_member_id_fkey"
+            columns: ["team_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
         ]
@@ -247,6 +263,44 @@ export type Database = {
           url?: string
         }
         Relationships: []
+      }
+      team_members: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          nickname: string | null
+          role: string
+          team_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          nickname?: string | null
+          role?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          nickname?: string | null
+          role?: string
+          team_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "team_members_team_id_fkey"
+            columns: ["team_id"]
+            isOneToOne: false
+            referencedRelation: "teams"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       teams: {
         Row: {

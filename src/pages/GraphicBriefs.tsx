@@ -3,7 +3,6 @@ import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -36,28 +35,25 @@ const GraphicBriefs = () => {
   const { user, role } = useAuth();
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
-  const [graphicUsers, setGraphicUsers] = useState<{ id: string; name: string }[]>([]);
+  const [graphicMembers, setGraphicMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
 
   // Form state
   const [briefType, setBriefType] = useState("Banner");
   const [description, setDescription] = useState("");
-  const [graphicUserId, setGraphicUserId] = useState("");
+  const [graphicMemberId, setGraphicMemberId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
-    const [{ data: bData }, { data: pData }, { data: rData }] = await Promise.all([
+    const [{ data: bData }, { data: pData }, { data: gData }] = await Promise.all([
       supabase.from("graphic_briefs").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, username, email"),
-      supabase.from("user_roles").select("user_id, role"),
+      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Graphic").order("name"),
     ]);
     setBriefs((bData as Brief[]) || []);
     const pMap: Record<string, string> = {};
     (pData || []).forEach((p: any) => { pMap[p.id] = p.username || p.email; });
     setProfiles(pMap);
-
-    // Find graphic users
-    const graphicIds = (rData || []).filter((r: any) => r.role === "graphic").map((r: any) => r.user_id);
-    setGraphicUsers(graphicIds.map((id: string) => ({ id, name: pMap[id] || "Unknown" })));
+    setGraphicMembers((gData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -77,7 +73,7 @@ const GraphicBriefs = () => {
     setSubmitting(true);
     const { error } = await supabase.from("graphic_briefs").insert({
       sales_user_id: user.id,
-      graphic_user_id: graphicUserId || null,
+      graphic_user_id: graphicMemberId || null,
       brief_type: briefType.trim(),
       description: description.trim() || null,
     } as any);
@@ -129,14 +125,14 @@ const GraphicBriefs = () => {
 
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">Graphic Designer</Label>
-              <Select value={graphicUserId} onValueChange={setGraphicUserId}>
+              <Select value={graphicMemberId} onValueChange={setGraphicMemberId}>
                 <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="Select designer" /></SelectTrigger>
                 <SelectContent>
-                  {graphicUsers.length === 0 ? (
-                    <SelectItem value="none" disabled>No graphic users found</SelectItem>
+                  {graphicMembers.length === 0 ? (
+                    <SelectItem value="none" disabled>No graphic members found</SelectItem>
                   ) : (
-                    graphicUsers.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.name}</SelectItem>
+                    graphicMembers.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>{g.nickname || g.name}</SelectItem>
                     ))
                   )}
                 </SelectContent>
@@ -176,7 +172,7 @@ const GraphicBriefs = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {profiles[brief.sales_user_id] || "Unknown"} → {brief.graphic_user_id ? profiles[brief.graphic_user_id] || "Unknown" : "Unassigned"}
+                        {profiles[brief.sales_user_id] || "Unknown"} → {brief.graphic_user_id ? profiles[brief.graphic_user_id] || "Assigned" : "Unassigned"}
                       </p>
                       {brief.description && <p className="mt-1 truncate text-xs text-muted-foreground">{brief.description}</p>}
                     </div>
