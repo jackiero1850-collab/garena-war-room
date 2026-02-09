@@ -10,6 +10,9 @@ import Dashboard from "@/pages/Dashboard";
 import DailyInput from "@/pages/DailyInput";
 import UserManagement from "@/pages/UserManagement";
 import Settings from "@/pages/Settings";
+import Assignments from "@/pages/Assignments";
+import GraphicBriefs from "@/pages/GraphicBriefs";
+import Resources from "@/pages/Resources";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -47,6 +50,9 @@ const App = () => (
             <Route path="/daily-input" element={<ProtectedRoute><DailyInput /></ProtectedRoute>} />
             <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
+            <Route path="/briefs" element={<ProtectedRoute><GraphicBriefs /></ProtectedRoute>} />
+            <Route path="/resources" element={<ProtectedRoute><Resources /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
