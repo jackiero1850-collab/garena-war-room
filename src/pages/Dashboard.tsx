@@ -30,8 +30,10 @@ const Dashboard = () => {
     const selectedDate = format(date, "yyyy-MM-dd");
 
     // Monthly stats (main KPI source: first of month → today)
-    let mQuery = supabase.from("daily_stats").select("*, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
-    if (teamId !== "all") mQuery = mQuery.eq("team_id", teamId);
+    // When filtering by team, join through team_members to match their team_id
+    let mQuery = teamId !== "all"
+      ? supabase.from("daily_stats").select("*, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
+      : supabase.from("daily_stats").select("*, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
     if (userId !== "all") mQuery = mQuery.eq("team_member_id", userId);
     const { data: mData } = await mQuery;
     setStats(mData || []);
@@ -39,8 +41,9 @@ const Dashboard = () => {
 
     // Chart data: last 30 days
     const chartStart = format(subDays(date, 29), "yyyy-MM-dd");
-    let cQuery = supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", selectedDate);
-    if (teamId !== "all") cQuery = cQuery.eq("team_id", teamId);
+    let cQuery = teamId !== "all"
+      ? supabase.from("daily_stats").select("date, signups_count, total_deposit_amount, team_members!inner(team_id)").gte("date", chartStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
+      : supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", selectedDate);
     if (userId !== "all") cQuery = cQuery.eq("team_member_id", userId);
     const { data: cData } = await cQuery;
 
@@ -57,8 +60,9 @@ const Dashboard = () => {
     );
 
     // Leaderboard for the whole month range
-    let lQuery = supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
-    if (teamId !== "all") lQuery = lQuery.eq("team_id", teamId);
+    let lQuery = teamId !== "all"
+      ? supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
+      : supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
     const { data: lData } = await lQuery;
 
     const userMap: Record<string, { name: string; signups: number; deposits: number; adSpend: number }> = {};

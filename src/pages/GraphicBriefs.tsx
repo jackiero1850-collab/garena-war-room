@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Layers, ArrowRight, RotateCcw, CheckCircle2, Scissors, Clock, User } from "lucide-react";
+import { Layers, CheckCircle2, Clock, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -25,10 +25,10 @@ interface Brief {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  queue: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอคิว" },
-  cutting: { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Scissors, label: "กำลังตัด" },
+  queue: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
+  cutting: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
+  fix: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
   done: { color: "bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] border-[hsl(var(--warroom-success))]/30", icon: CheckCircle2, label: "เสร็จแล้ว" },
-  fix: { color: "bg-primary/20 text-primary border-primary/30", icon: RotateCcw, label: "แก้ไข" },
 };
 
 const GraphicBriefs = () => {
@@ -88,10 +88,11 @@ const GraphicBriefs = () => {
     }
   };
 
-  const updateStatus = async (briefId: string, newStatus: string) => {
-    const update: any = { status: newStatus };
-    if (newStatus === "done") update.completion_date = new Date().toISOString();
-    const { error } = await supabase.from("graphic_briefs").update(update).eq("id", briefId);
+  const markDone = async (briefId: string) => {
+    const { error } = await supabase.from("graphic_briefs").update({
+      status: "done" as any,
+      completion_date: new Date().toISOString(),
+    }).eq("id", briefId);
     if (error) {
       toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
@@ -107,41 +108,37 @@ const GraphicBriefs = () => {
   graphicMembers.forEach((g) => { graphicMap[g.id] = g.nickname || g.name; });
 
   // Workload summary: count active briefs per designer
-  const workloadMap: Record<string, { name: string; queue: number; cutting: number; fix: number }> = {};
+  const workloadMap: Record<string, { name: string; total: number }> = {};
   graphicMembers.forEach((g) => {
-    workloadMap[g.id] = { name: g.nickname || g.name, queue: 0, cutting: 0, fix: 0 };
+    workloadMap[g.id] = { name: g.nickname || g.name, total: 0 };
   });
   activeBriefs.forEach((b) => {
     if (b.graphic_user_id && workloadMap[b.graphic_user_id]) {
-      const s = b.status as "queue" | "cutting" | "fix";
-      if (s in workloadMap[b.graphic_user_id]) {
-        workloadMap[b.graphic_user_id][s]++;
-      }
+      workloadMap[b.graphic_user_id].total++;
     }
   });
 
   return (
     <div className="space-y-6 p-6">
-      <h1 className="font-display text-2xl text-foreground">กราฟิกบรีฟ</h1>
+      <h1 className="font-display text-2xl text-foreground">บรีฟกราฟิก</h1>
 
       {/* Designer Workload Banner */}
       {graphicMembers.length > 0 && (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {graphicMembers.map((g) => {
             const w = workloadMap[g.id];
-            const total = w.queue + w.cutting + w.fix;
             return (
               <div key={g.id} className="flex items-center gap-3 rounded border border-border bg-card p-3">
-                <div className={cn("flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold", total === 0 ? "bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))]" : total >= 5 ? "bg-destructive/20 text-destructive" : "bg-yellow-500/20 text-yellow-400")}>
-                  {total}
+                <div className={cn("flex h-9 w-9 items-center justify-center rounded-full text-sm font-bold", w.total === 0 ? "bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))]" : w.total >= 5 ? "bg-destructive/20 text-destructive" : "bg-yellow-500/20 text-yellow-400")}>
+                  {w.total}
                 </div>
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-foreground">{w.name}</p>
                   <p className="text-[10px] text-muted-foreground">
-                    {total === 0 ? "ว่าง" : `${w.queue} รอ · ${w.cutting} ตัด · ${w.fix} แก้ไข`}
+                    {w.total === 0 ? "ว่าง" : `${w.total} งานค้าง`}
                   </p>
                 </div>
-                <div className={cn("h-2 w-2 rounded-full", total === 0 ? "bg-[hsl(var(--warroom-success))]" : total >= 5 ? "bg-destructive animate-pulse" : "bg-yellow-400")} />
+                <div className={cn("h-2 w-2 rounded-full", w.total === 0 ? "bg-[hsl(var(--warroom-success))]" : w.total >= 5 ? "bg-destructive animate-pulse" : "bg-yellow-400")} />
               </div>
             );
           })}
@@ -173,7 +170,7 @@ const GraphicBriefs = () => {
                 <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกดีไซเนอร์" /></SelectTrigger>
                 <SelectContent>
                   {graphicMembers.length === 0 ? (
-                    <SelectItem value="none" disabled>ไม่พบสมาชิกกราฟิก — เพิ่มในทีมรอสเตอร์</SelectItem>
+                    <SelectItem value="none" disabled>ไม่พบสมาชิกกราฟิก — เพิ่มในรายชื่อพนักงาน</SelectItem>
                   ) : (
                     graphicMembers.map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.nickname || g.name}</SelectItem>
@@ -204,46 +201,22 @@ const GraphicBriefs = () => {
             </div>
           ) : (
             <div className="space-y-2">
-              {activeBriefs.map((brief) => {
-                const statusConfig = STATUS_CONFIG[brief.status] || STATUS_CONFIG.queue;
-                const StatusIcon = statusConfig.icon;
-                return (
-                  <div key={brief.id} className="flex items-center gap-3 rounded border border-border bg-card p-3">
-                    <Badge variant="outline" className={cn("shrink-0", statusConfig.color)}>
-                      <StatusIcon className="mr-1 h-3 w-3" /> {statusConfig.label}
-                    </Badge>
-                    <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {profiles[brief.sales_user_id] || "ไม่ทราบ"} → {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "มอบหมายแล้ว" : "ยังไม่มอบหมาย"}
-                      </p>
-                      {brief.description && <p className="mt-1 truncate text-xs text-muted-foreground">{brief.description}</p>}
-                    </div>
-                    <div className="flex shrink-0 gap-1">
-                      {brief.status === "queue" && (role === "manager") && (
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "cutting")} className="text-xs">
-                          <Scissors className="mr-1 h-3 w-3" /> เริ่ม
-                        </Button>
-                      )}
-                      {brief.status === "cutting" && (
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "done")} className="text-xs text-[hsl(var(--warroom-success))]">
-                          <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จ
-                        </Button>
-                      )}
-                      {(brief.status === "cutting" || brief.status === "done") && (brief.sales_user_id === user?.id || role === "manager") && (
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "fix")} className="text-xs text-destructive">
-                          <RotateCcw className="mr-1 h-3 w-3" /> แก้ไข
-                        </Button>
-                      )}
-                      {brief.status === "fix" && (role === "manager") && (
-                        <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "queue")} className="text-xs">
-                          <ArrowRight className="mr-1 h-3 w-3" /> คืนคิว
-                        </Button>
-                      )}
-                    </div>
+              {activeBriefs.map((brief) => (
+                <div key={brief.id} className="flex items-center gap-3 rounded border border-border bg-card p-3">
+                  <Badge variant="outline" className="shrink-0 bg-yellow-500/20 text-yellow-400 border-yellow-500/30">
+                    <Clock className="mr-1 h-3 w-3" /> รอดำเนินการ
+                  </Badge>
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "ยังไม่มอบหมาย"} · {format(new Date(brief.created_at), "dd MMM")}
+                    </p>
                   </div>
-                );
-              })}
+                  <Button size="sm" variant="outline" onClick={() => markDone(brief.id)} className="shrink-0 text-xs text-[hsl(var(--warroom-success))]">
+                    <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จ
+                  </Button>
+                </div>
+              ))}
             </div>
           )}
 
@@ -259,7 +232,7 @@ const GraphicBriefs = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {profiles[brief.sales_user_id] || "ไม่ทราบ"} • {brief.completion_date ? format(new Date(brief.completion_date), "dd MMM") : "—"}
+                        {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "—"} · {brief.completion_date ? format(new Date(brief.completion_date), "dd MMM") : "—"}
                       </p>
                     </div>
                   </div>

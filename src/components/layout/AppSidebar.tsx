@@ -12,14 +12,14 @@ import { Separator } from "@/components/ui/separator";
 const navItems = [
   { label: "แดชบอร์ด", icon: LayoutDashboard, path: "/", enabled: true },
   { label: "ลงข้อมูลรายวัน", icon: FileInput, path: "/daily-input", enabled: true },
-  { label: "จัดการผู้ใช้", icon: Users, path: "/users", enabled: true, managerOnly: true },
-  { label: "ทีมรอสเตอร์", icon: UsersRound, path: "/roster", enabled: true, managerOnly: true },
-  { label: "ตั้งค่าระบบ", icon: Cog, path: "/system-settings", enabled: true, managerOnly: true },
-  { label: "ตั้งค่าโปรไฟล์", icon: Settings, path: "/settings", enabled: true },
   { label: "งานที่มอบหมาย", icon: ClipboardList, path: "/assignments", enabled: true },
-  { label: "กราฟิกบรีฟ", icon: Palette, path: "/briefs", enabled: true },
-  { label: "ผลงานทีม", icon: BarChart3, path: "/team-performance", enabled: true, leaderUp: true },
+  { label: "บรีฟกราฟิก", icon: Palette, path: "/briefs", enabled: true },
   { label: "แหล่งข้อมูล", icon: FolderOpen, path: "/resources", enabled: true },
+  { label: "ผลงานทีม", icon: BarChart3, path: "/team-performance", enabled: true, leaderUp: true },
+  { label: "ตั้งค่าโปรไฟล์", icon: Settings, path: "/settings", enabled: true },
+  { label: "จัดการผู้ใช้", icon: Users, path: "/users", enabled: true, managerOnly: true },
+  { label: "รายชื่อพนักงาน", icon: UsersRound, path: "/roster", enabled: true, managerOnly: true },
+  { label: "ตั้งค่าระบบ", icon: Cog, path: "/system-settings", enabled: true, managerOnly: true },
 ];
 
 const AppSidebar = () => {
