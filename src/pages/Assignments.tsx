@@ -15,25 +15,14 @@ import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
 
 interface Assignment {
-  id: string;
-  title: string;
-  description: string | null;
-  due_date: string;
-  type: string;
-  status: string;
-  created_by: string | null;
-  created_at: string;
-  cover_image_url: string | null;
-  website: string | null;
+  id: string; title: string; description: string | null; due_date: string;
+  type: string; status: string; created_by: string | null; created_at: string;
+  cover_image_url: string | null; website: string | null;
 }
 
 interface Submission {
-  id: string;
-  assignment_id: string;
-  user_id: string;
-  image_proof_urls: string[];
-  notes: string | null;
-  submitted_at: string;
+  id: string; assignment_id: string; user_id: string;
+  image_proof_urls: string[]; notes: string | null; submitted_at: string;
 }
 
 const Assignments = () => {
@@ -41,8 +30,8 @@ const Assignments = () => {
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
-  const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
+  const [assignmentTypes, setAssignmentTypes] = useState<{ id: string; name: string }[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -62,20 +51,20 @@ const Assignments = () => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [{ data: aData }, { data: sData }, { data: pData }, { data: tmData }, { data: wData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }] = await Promise.all([
       supabase.from("assignments").select("*").order("due_date", { ascending: true }),
       supabase.from("assignment_submissions").select("*"),
       supabase.from("profiles").select("id, username, email"),
-      supabase.from("team_members").select("id, name, nickname").order("name"),
       supabase.from("websites").select("id, name").order("name"),
+      supabase.from("master_assignment_types").select("id, name").order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);
     const pMap: Record<string, string> = {};
     (pData || []).forEach((p: any) => { pMap[p.id] = p.username || p.email; });
     setProfiles(pMap);
-    setTeamMembers((tmData as any[]) || []);
     setWebsites((wData as any[]) || []);
+    setAssignmentTypes((atData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -111,14 +100,9 @@ const Assignments = () => {
   const handleCreateOrEdit = async () => {
     if (!newTitle.trim()) return;
     const payload: any = {
-      title: newTitle.trim(),
-      description: newDesc.trim() || null,
-      due_date: newDueDate,
-      type: newType,
-      cover_image_url: coverUrl || null,
-      website: newWebsite === "none" ? null : newWebsite,
+      title: newTitle.trim(), description: newDesc.trim() || null, due_date: newDueDate,
+      type: newType, cover_image_url: coverUrl || null, website: newWebsite === "none" ? null : newWebsite,
     };
-
     if (editingAssignment) {
       const { error } = await supabase.from("assignments").update(payload).eq("id", editingAssignment.id);
       if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
@@ -129,16 +113,13 @@ const Assignments = () => {
       if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
       toast({ title: "สร้างงานแล้ว" });
     }
-    setShowCreate(false);
-    fetchData();
+    setShowCreate(false); fetchData();
   };
 
   const handleDelete = async (id: string) => {
     const { error } = await supabase.from("assignments").delete().eq("id", id);
     if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
-    toast({ title: "ลบงานแล้ว" });
-    setSelectedAssignment(null);
-    fetchData();
+    toast({ title: "ลบงานแล้ว" }); setSelectedAssignment(null); fetchData();
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -164,15 +145,12 @@ const Assignments = () => {
   const handleSubmitProof = async () => {
     if (!selectedAssignment || !user) return;
     const { error } = await supabase.from("assignment_submissions").insert({
-      assignment_id: selectedAssignment.id,
-      user_id: user.id,
-      image_proof_urls: uploadedUrls,
-      notes: submitNotes.trim() || null,
+      assignment_id: selectedAssignment.id, user_id: user.id,
+      image_proof_urls: uploadedUrls, notes: submitNotes.trim() || null,
     } as any);
     if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
     toast({ title: "ส่งหลักฐานแล้ว!" });
-    setShowSubmit(false); setSubmitNotes(""); setUploadedUrls([]);
-    fetchData();
+    setShowSubmit(false); setSubmitNotes(""); setUploadedUrls([]); fetchData();
   };
 
   const getCountdownBadge = (dueDate: string) => {
@@ -192,8 +170,16 @@ const Assignments = () => {
   const monthEnd = endOfMonth(currentMonth);
   const calendarDays = eachDayOfInterval({ start: addDays(monthStart, -monthStart.getDay()), end: addDays(monthEnd, 6 - monthEnd.getDay()) });
 
-  const getAssignmentsForDay = (day: Date) =>
-    assignments.filter((a) => isSameDay(new Date(a.due_date), day));
+  const getAssignmentsForDay = (day: Date) => assignments.filter((a) => isSameDay(new Date(a.due_date), day));
+
+  // Mission view data
+  const today = new Date();
+  const todayMissions = assignments.filter((a) => isSameDay(new Date(a.due_date), today));
+  const incomingMissions = assignments.filter((a) => {
+    const d = new Date(a.due_date);
+    const diff = differenceInDays(d, today);
+    return diff >= 1 && diff <= 3;
+  });
 
   return (
     <div className="space-y-6 p-6">
@@ -221,16 +207,14 @@ const Assignments = () => {
         <div className="grid grid-cols-7">
           {calendarDays.map((day, i) => {
             const dayAssignments = getAssignmentsForDay(day);
-            const isToday = isSameDay(day, new Date());
+            const isToday = isSameDay(day, today);
             return (
               <div key={i} className={cn("min-h-[90px] border-b border-r border-border p-1", !isSameMonth(day, currentMonth) && "bg-muted/20", isToday && "bg-primary/5")}>
                 <span className={cn("block text-xs", isToday ? "font-bold text-primary" : "text-muted-foreground")}>{format(day, "d")}</span>
                 {dayAssignments.map((a) => (
                   <button key={a.id} onClick={() => setSelectedAssignment(a)}
                     className={cn("mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] font-medium flex items-center gap-1", a.type === "event" ? "bg-primary/20 text-primary" : "bg-accent/40 text-accent-foreground")}>
-                    {a.cover_image_url && (
-                      <img src={a.cover_image_url} alt="" className="h-5 w-5 rounded-sm object-cover shrink-0" />
-                    )}
+                    {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-5 w-5 rounded-sm object-cover shrink-0" />}
                     <span className="truncate">{a.title}</span>
                   </button>
                 ))}
@@ -240,7 +224,64 @@ const Assignments = () => {
         </div>
       </div>
 
-      {/* Submission Zone - shows when an assignment is selected */}
+      {/* Mission Split View */}
+      <div className="grid gap-4 lg:grid-cols-2">
+        {/* Today's Missions */}
+        <div className="rounded border border-primary/30 bg-card">
+          <div className="border-b border-border px-4 py-3 flex items-center gap-2">
+            <div className="h-2 w-2 rounded-full bg-primary animate-pulse" />
+            <h3 className="font-display text-sm uppercase tracking-wider text-foreground">ภารกิจวันนี้</h3>
+            <Badge variant="outline" className="ml-auto text-xs">{todayMissions.length}</Badge>
+          </div>
+          <div className="divide-y divide-border">
+            {todayMissions.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่มีภารกิจวันนี้</p>
+            ) : todayMissions.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+                {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
+                  </div>
+                </div>
+                {hasSubmitted(a.id) ? (
+                  <Badge className="bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] shrink-0"><CheckCircle2 className="mr-1 h-3 w-3" />ส่งแล้ว</Badge>
+                ) : (
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={() => { setSelectedAssignment(a); setShowSubmit(true); }}>
+                    <Upload className="mr-1 h-3 w-3" /> ส่งงาน
+                  </Button>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Incoming Missions */}
+        <div className="rounded border border-border bg-card">
+          <div className="border-b border-border px-4 py-3 flex items-center gap-2">
+            <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+            <h3 className="font-display text-sm uppercase tracking-wider text-foreground">กำลังจะมาถึง (3 วัน)</h3>
+            <Badge variant="outline" className="ml-auto text-xs">{incomingMissions.length}</Badge>
+          </div>
+          <div className="divide-y divide-border">
+            {incomingMissions.length === 0 ? (
+              <p className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่มีงานใน 3 วันข้างหน้า</p>
+            ) : incomingMissions.map((a) => (
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedAssignment(a)}>
+                {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                  {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
+                </div>
+                {getCountdownBadge(a.due_date)}
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Selected Assignment Detail */}
       {selectedAssignment && !showSubmit && (
         <div className="rounded border border-primary/30 bg-card p-5 space-y-4">
           <div className="flex items-start gap-4">
@@ -259,39 +300,30 @@ const Assignments = () => {
                 <span className="text-sm text-muted-foreground">กำหนด: {format(new Date(selectedAssignment.due_date), "dd MMM yyyy")}</span>
               </div>
               {selectedAssignment.description && <p className="text-sm text-muted-foreground">{selectedAssignment.description}</p>}
-
-              {/* Submission status */}
               <div className="space-y-2 pt-2">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">สถานะการส่ง</p>
                 {getSubmitters(selectedAssignment.id).length > 0 ? (
                   <div className="flex flex-wrap gap-1">
                     {getSubmitters(selectedAssignment.id).map((name, i) => (
-                      <Badge key={i} className="bg-warroom-success/20 text-warroom-success">
-                        <CheckCircle2 className="mr-1 h-3 w-3" /> {name}
-                      </Badge>
+                      <Badge key={i} className="bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))]"><CheckCircle2 className="mr-1 h-3 w-3" /> {name}</Badge>
                     ))}
                   </div>
                 ) : (<p className="text-sm text-muted-foreground">ยังไม่มีคนส่ง</p>)}
               </div>
-
               <div className="flex gap-2 pt-2">
                 {!hasSubmitted(selectedAssignment.id) ? (
                   <Button onClick={() => setShowSubmit(true)} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
                     <Upload className="mr-2 h-4 w-4" /> ส่งหลักฐาน
                   </Button>
                 ) : (
-                  <div className="flex items-center gap-2 rounded bg-warroom-success/10 px-4 py-2 text-warroom-success">
+                  <div className="flex items-center gap-2 rounded bg-[hsl(var(--warroom-success))]/10 px-4 py-2 text-[hsl(var(--warroom-success))]">
                     <CheckCircle2 className="h-4 w-4" /><span className="text-sm font-medium">คุณส่งแล้ว</span>
                   </div>
                 )}
                 {role === "manager" && (
                   <>
-                    <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openEdit(a); }}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(selectedAssignment.id)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                    <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openEdit(a); }}><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(selectedAssignment.id)}><Trash2 className="h-4 w-4" /></Button>
                   </>
                 )}
               </div>
@@ -330,9 +362,7 @@ const Assignments = () => {
       {/* Create/Edit Assignment Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
         <DialogContent className="border-border bg-card">
-          <DialogHeader>
-            <DialogTitle className="font-display uppercase tracking-wider">{editingAssignment ? "แก้ไขงาน" : "สร้างงานใหม่"}</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle className="font-display uppercase tracking-wider">{editingAssignment ? "แก้ไขงาน" : "สร้างงานใหม่"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่องาน</Label>
@@ -352,8 +382,7 @@ const Assignments = () => {
                 <Select value={newType} onValueChange={setNewType}>
                   <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="event">Event</SelectItem>
-                    <SelectItem value="live">Live</SelectItem>
+                    {assignmentTypes.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>

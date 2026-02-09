@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { useAppSettings } from "@/hooks/useAppSettings";
 import {
   LayoutDashboard, FileInput, Users, UsersRound, Settings,
   ClipboardList, Palette, FolderOpen, Crosshair, LogOut, Cog,
@@ -24,14 +25,19 @@ const AppSidebar = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { role, signOut, profile } = useAuth();
+  const { app_name, app_logo_url } = useAppSettings();
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-sidebar">
       <div className="flex items-center gap-3 border-b border-border px-4 py-4">
-        <div className="flex h-8 w-8 items-center justify-center rounded border border-primary/50 bg-primary/10">
-          <Crosshair className="h-4 w-4 text-primary" />
-        </div>
-        <span className="font-display text-lg tracking-wider text-foreground">WAR ROOM</span>
+        {app_logo_url ? (
+          <img src={app_logo_url} alt="Logo" className="h-8 w-8 rounded object-cover" />
+        ) : (
+          <div className="flex h-8 w-8 items-center justify-center rounded border border-primary/50 bg-primary/10">
+            <Crosshair className="h-4 w-4 text-primary" />
+          </div>
+        )}
+        <span className="font-display text-lg tracking-wider text-foreground">{app_name}</span>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">

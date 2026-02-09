@@ -17,7 +17,7 @@ const DailyInput = () => {
   const { user, profile } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
   const [teamMemberId, setTeamMemberId] = useState("");
-  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null; team_id: string | null }[]>([]);
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [signups, setSignups] = useState("");
   const [deposits, setDeposits] = useState("");
@@ -32,7 +32,7 @@ const DailyInput = () => {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role, team_id").eq("role", "Sales").order("name"),
       supabase.from("websites").select("id, name").order("name"),
     ]).then(([{ data: mData }, { data: wData }]) => {
       setSalesMembers((mData as any[]) || []);
@@ -53,6 +53,10 @@ const DailyInput = () => {
   };
 
   useEffect(() => { fetchHistory(); }, [user]);
+
+  // Auto-fetch team_id when selecting a salesperson
+  const selectedMember = salesMembers.find((m) => m.id === teamMemberId);
+  const autoTeamId = selectedMember?.team_id || null;
 
   const validate = () => {
     const errs: Record<string, boolean> = {};
@@ -76,7 +80,7 @@ const DailyInput = () => {
       user_id: user.id,
       team_member_id: teamMemberId,
       date: format(date, "yyyy-MM-dd"),
-      team_id: profile?.team_id || null,
+      team_id: autoTeamId,
       signups_count: parseInt(signups),
       deposit_count: parseInt(deposits),
       first_deposit_amount: parseFloat(firstDep),
@@ -132,6 +136,9 @@ const DailyInput = () => {
                 ))}
               </SelectContent>
             </Select>
+            {autoTeamId && selectedMember && (
+              <p className="text-xs text-primary">ทีม: อัตโนมัติ</p>
+            )}
           </div>
 
           <div className="space-y-2">
@@ -220,7 +227,7 @@ const DailyInput = () => {
                   <TableCell className="text-right">{row.deposit_count}</TableCell>
                   <TableCell className="text-right">฿{Number(row.first_deposit_amount).toLocaleString()}</TableCell>
                   <TableCell className="text-right">฿{Number(row.total_deposit_amount).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">${Number(row.ad_spend_usd).toLocaleString()}</TableCell>
+                  <TableCell className="text-right">฿{Math.round(Number(row.ad_spend_usd) * 34).toLocaleString()}</TableCell>
                   <TableCell>{row.website_name}</TableCell>
                 </TableRow>
               ))
