@@ -36,23 +36,26 @@ const GraphicBriefs = () => {
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [graphicMembers, setGraphicMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [briefTypes, setBriefTypes] = useState<{ id: string; name: string }[]>([]);
 
-  const [briefType, setBriefType] = useState("Banner");
+  const [briefType, setBriefType] = useState("");
   const [description, setDescription] = useState("");
   const [graphicMemberId, setGraphicMemberId] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
-    const [{ data: bData }, { data: pData }, { data: gData }] = await Promise.all([
+    const [{ data: bData }, { data: pData }, { data: gData }, { data: btData }] = await Promise.all([
       supabase.from("graphic_briefs").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, username, email"),
       supabase.from("team_members").select("id, name, nickname, role").eq("role", "Graphic").order("name"),
+      supabase.from("master_brief_types").select("id, name").order("name"),
     ]);
     setBriefs((bData as Brief[]) || []);
     const pMap: Record<string, string> = {};
     (pData || []).forEach((p: any) => { pMap[p.id] = p.username || p.email; });
     setProfiles(pMap);
     setGraphicMembers((gData as any[]) || []);
+    setBriefTypes((btData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -117,8 +120,10 @@ const GraphicBriefs = () => {
               <Select value={briefType} onValueChange={setBriefType}>
                 <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {["Banner", "Poster", "Social Post", "Video Thumbnail", "Ad Creative", "Other"].map((t) => (
-                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  {briefTypes.length === 0 ? (
+                    <SelectItem value="none" disabled>ไม่พบประเภท — เพิ่มในตั้งค่าระบบ</SelectItem>
+                  ) : briefTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>

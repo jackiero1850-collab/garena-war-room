@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { UserPlus, Pencil, Trash2, Search, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-const DEFAULT_ROLES = ["Manager", "Leader", "Sales", "Graphic"];
+// Will be fetched from master_roles table
 
 interface TeamMember {
   id: string;
@@ -27,7 +27,7 @@ const TeamRoster = () => {
   const { role } = useAuth();
   const [members, setMembers] = useState<TeamMember[]>([]);
   const [teams, setTeams] = useState<Team[]>([]);
-  const [allRoles, setAllRoles] = useState<string[]>(DEFAULT_ROLES);
+  const [allRoles, setAllRoles] = useState<string[]>([]);
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editMember, setEditMember] = useState<TeamMember | null>(null);
@@ -40,9 +40,10 @@ const TeamRoster = () => {
   const [formTeamId, setFormTeamId] = useState("none");
 
   const fetchData = async () => {
-    const [{ data: mData }, { data: tData }] = await Promise.all([
+    const [{ data: mData }, { data: tData }, { data: rData }] = await Promise.all([
       supabase.from("team_members").select("*").order("name"),
       supabase.from("teams").select("*").order("name"),
+      supabase.from("master_roles").select("name").order("name"),
     ]);
     setTeams((tData as Team[]) || []);
     const teamMap: Record<string, string> = {};
@@ -52,9 +53,8 @@ const TeamRoster = () => {
       teamName: m.team_id ? teamMap[m.team_id] || "—" : "—",
     }));
     setMembers(membersList);
-    // Collect unique roles
-    const uniqueRoles = [...new Set([...DEFAULT_ROLES, ...membersList.map((m) => m.role)])].sort();
-    setAllRoles(uniqueRoles);
+    const dbRoles = ((rData as any[]) || []).map((r) => r.name);
+    setAllRoles(dbRoles.length > 0 ? dbRoles : ["Sales"]);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -80,10 +80,10 @@ const TeamRoster = () => {
     setEditMember(m);
     setFormName(m.name);
     setFormNickname(m.nickname || "");
-    const isDefault = DEFAULT_ROLES.includes(m.role);
-    setFormRole(isDefault ? m.role : "__custom__");
-    setFormCustomRole(isDefault ? "" : m.role);
-    setUseCustomRole(!isDefault);
+    const isKnown = allRoles.includes(m.role);
+    setFormRole(isKnown ? m.role : "__custom__");
+    setFormCustomRole(isKnown ? "" : m.role);
+    setUseCustomRole(!isKnown);
     setFormTeamId(m.team_id || "none");
     setDialogOpen(true);
   };
