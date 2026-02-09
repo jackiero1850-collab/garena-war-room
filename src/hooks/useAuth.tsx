@@ -1,4 +1,4 @@
-import { useState, useEffect, createContext, useContext, ReactNode } from "react";
+import { useState, useEffect, useRef, createContext, useContext, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { User } from "@supabase/supabase-js";
 import type { Tables, Enums } from "@/integrations/supabase/types";
@@ -22,41 +22,86 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const isMounted = useRef(true);
 
   const fetchProfileAndRole = async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
-      supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
-    ]);
-    setProfile(profileRes.data);
-    setRole(roleRes.data?.role ?? null);
+    try {
+      const [profileRes, roleRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
+        supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
+      ]);
+      if (isMounted.current) {
+        setProfile(profileRes.data);
+        setRole(roleRes.data?.role ?? null);
+      }
+    } catch (err) {
+      console.error("Failed to fetch profile/role:", err);
+      if (isMounted.current) {
+        setProfile(null);
+        setRole(null);
+      }
+    }
   };
 
   useEffect(() => {
+    isMounted.current = true;
+
+    // Safety timeout: if loading persists > 5s, force clear and redirect
+    const timeout = setTimeout(() => {
+      if (isMounted.current && loading) {
+        console.warn("Auth loading timed out, forcing sign out");
+        supabase.auth.signOut();
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setLoading(false);
+      }
+    }, 5000);
+
+    // Listener for ongoing auth changes (fire-and-forget role fetch)
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (_event, session) => {
+      (_event, session) => {
+        if (!isMounted.current) return;
         const currentUser = session?.user ?? null;
         setUser(currentUser);
         if (currentUser) {
-          await fetchProfileAndRole(currentUser.id);
+          // Don't await — avoid blocking the listener
+          fetchProfileAndRole(currentUser.id);
         } else {
           setProfile(null);
           setRole(null);
         }
-        setLoading(false);
       }
     );
 
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      const currentUser = session?.user ?? null;
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchProfileAndRole(currentUser.id);
-      }
-      setLoading(false);
-    });
+    // Initial load — controls loading state
+    const initializeAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!isMounted.current) return;
 
-    return () => subscription.unsubscribe();
+        const currentUser = session?.user ?? null;
+        setUser(currentUser);
+
+        if (currentUser) {
+          await fetchProfileAndRole(currentUser.id);
+        }
+      } catch (err) {
+        console.error("Auth init error:", err);
+      } finally {
+        if (isMounted.current) {
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
+
+    return () => {
+      isMounted.current = false;
+      clearTimeout(timeout);
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
