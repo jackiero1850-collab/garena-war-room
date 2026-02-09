@@ -19,10 +19,12 @@ const Dashboard = () => {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   const fetchData = useCallback(async () => {
-    // Daily stats for selected date
-    let query = supabase.from("daily_stats").select("*, profiles!daily_stats_user_id_fkey(username, email)").eq("date", format(date, "yyyy-MM-dd"));
+    const selectedDate = format(date, "yyyy-MM-dd");
+
+    // Daily stats for selected date — now uses team_members for name
+    let query = supabase.from("daily_stats").select("*, team_members(name, nickname)").eq("date", selectedDate);
     if (teamId !== "all") query = query.eq("team_id", teamId);
-    if (userId !== "all") query = query.eq("user_id", userId);
+    if (userId !== "all") query = query.eq("team_member_id", userId);
     const { data: dayData } = await query;
     setStats(dayData || []);
 
@@ -31,19 +33,17 @@ const Dashboard = () => {
     const monthEnd = format(endOfMonth(date), "yyyy-MM-dd");
     let mQuery = supabase.from("daily_stats").select("*").gte("date", monthStart).lte("date", monthEnd);
     if (teamId !== "all") mQuery = mQuery.eq("team_id", teamId);
-    if (userId !== "all") mQuery = mQuery.eq("user_id", userId);
+    if (userId !== "all") mQuery = mQuery.eq("team_member_id", userId);
     const { data: mData } = await mQuery;
     setMonthlyStats(mData || []);
 
     // Chart data (last 30 days)
     const chartStart = format(subDays(date, 29), "yyyy-MM-dd");
-    const chartEnd = format(date, "yyyy-MM-dd");
-    let cQuery = supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", chartEnd);
+    let cQuery = supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", selectedDate);
     if (teamId !== "all") cQuery = cQuery.eq("team_id", teamId);
-    if (userId !== "all") cQuery = cQuery.eq("user_id", userId);
+    if (userId !== "all") cQuery = cQuery.eq("team_member_id", userId);
     const { data: cData } = await cQuery;
 
-    // Aggregate chart data by date
     const byDate: Record<string, { signups: number; deposit: number }> = {};
     (cData || []).forEach((r) => {
       if (!byDate[r.date]) byDate[r.date] = { signups: 0, deposit: 0 };
@@ -56,20 +56,20 @@ const Dashboard = () => {
         .map(([d, v]) => ({ date: format(new Date(d), "MMM dd"), ...v }))
     );
 
-    // Leaderboard
-    let lQuery = supabase.from("daily_stats").select("user_id, signups_count, deposit_count, ad_spend_usd, profiles!daily_stats_user_id_fkey(username, email)").eq("date", format(date, "yyyy-MM-dd"));
+    // Leaderboard — group by team_member_id
+    let lQuery = supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").eq("date", selectedDate);
     if (teamId !== "all") lQuery = lQuery.eq("team_id", teamId);
     const { data: lData } = await lQuery;
 
     const userMap: Record<string, { name: string; signups: number; deposits: number; adSpend: number }> = {};
     (lData || []).forEach((r: any) => {
-      const uid = r.user_id;
-      if (!userMap[uid]) {
-        userMap[uid] = { name: r.profiles?.username || r.profiles?.email || "Unknown", signups: 0, deposits: 0, adSpend: 0 };
+      const mid = r.team_member_id || "unknown";
+      if (!userMap[mid]) {
+        userMap[mid] = { name: r.team_members?.nickname || r.team_members?.name || "Unknown", signups: 0, deposits: 0, adSpend: 0 };
       }
-      userMap[uid].signups += r.signups_count;
-      userMap[uid].deposits += r.deposit_count;
-      userMap[uid].adSpend += Number(r.ad_spend_usd);
+      userMap[mid].signups += r.signups_count;
+      userMap[mid].deposits += r.deposit_count;
+      userMap[mid].adSpend += Number(r.ad_spend_usd);
     });
 
     setLeaderboard(
@@ -84,17 +84,13 @@ const Dashboard = () => {
     );
   }, [date, teamId, userId]);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  useEffect(() => { fetchData(); }, [fetchData]);
 
   // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel("dashboard-realtime")
-      .on("postgres_changes", { event: "*", schema: "public", table: "daily_stats" }, () => {
-        fetchData();
-      })
+      .on("postgres_changes", { event: "*", schema: "public", table: "daily_stats" }, () => fetchData())
       .subscribe();
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
@@ -125,7 +121,6 @@ const Dashboard = () => {
         />
       </div>
 
-      {/* KPI Cards */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11">
         <KpiCard title="Signups" value={totalSignups} icon={Users} highlight />
         <KpiCard title="Depositors" value={totalDepositors} icon={TrendingUp} />
@@ -140,14 +135,9 @@ const Dashboard = () => {
         <KpiCard title="Expenses" value="—" icon={Wallet} subtitle="Coming soon" />
       </div>
 
-      {/* Chart + Leaderboard */}
       <div className="grid gap-6 lg:grid-cols-5">
-        <div className="lg:col-span-3">
-          <StatsChart data={chartData} />
-        </div>
-        <div className="lg:col-span-2">
-          <LeaderboardTable data={leaderboard} />
-        </div>
+        <div className="lg:col-span-3"><StatsChart data={chartData} /></div>
+        <div className="lg:col-span-2"><LeaderboardTable data={leaderboard} /></div>
       </div>
     </div>
   );

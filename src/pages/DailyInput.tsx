@@ -12,13 +12,14 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { CalendarIcon, Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
-import type { Tables } from "@/integrations/supabase/types";
 
 const WEBSITES = ["MGB-USA", "UNI-USA", "MGB-X"] as const;
 
 const DailyInput = () => {
   const { user, profile } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
+  const [teamMemberId, setTeamMemberId] = useState("");
+  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [signups, setSignups] = useState("");
   const [deposits, setDeposits] = useState("");
   const [firstDep, setFirstDep] = useState("");
@@ -30,30 +31,26 @@ const DailyInput = () => {
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
+  useEffect(() => {
+    supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name")
+      .then(({ data }) => setSalesMembers((data as any[]) || []));
+  }, []);
+
   const fetchHistory = async () => {
     if (!user) return;
-    let query = supabase
+    const { data } = await supabase
       .from("daily_stats")
-      .select("*, profiles!daily_stats_user_id_fkey(username, email)")
+      .select("*, team_members(name, nickname)")
       .order("date", { ascending: false })
       .limit(50);
-
-    if (profile?.team_id) {
-      query = query.eq("team_id", profile.team_id);
-    } else {
-      query = query.eq("user_id", user.id);
-    }
-
-    const { data } = await query;
     setHistory(data || []);
   };
 
-  useEffect(() => {
-    fetchHistory();
-  }, [user, profile]);
+  useEffect(() => { fetchHistory(); }, [user]);
 
   const validate = () => {
     const errs: Record<string, boolean> = {};
+    if (!teamMemberId) errs.teamMemberId = true;
     if (!signups) errs.signups = true;
     if (!deposits) errs.deposits = true;
     if (!firstDep) errs.firstDep = true;
@@ -68,9 +65,13 @@ const DailyInput = () => {
     e.preventDefault();
     if (!validate() || !user) return;
 
+    // Get the team_id from the selected member
+    const member = salesMembers.find(m => m.id === teamMemberId);
+
     setSubmitting(true);
     const { error } = await supabase.from("daily_stats").insert({
       user_id: user.id,
+      team_member_id: teamMemberId,
       date: format(date, "yyyy-MM-dd"),
       team_id: profile?.team_id || null,
       signups_count: parseInt(signups),
@@ -99,7 +100,6 @@ const DailyInput = () => {
     <div className="space-y-6 p-6">
       <h1 className="font-display text-2xl text-foreground">Daily Input</h1>
 
-      {/* Form */}
       <form onSubmit={handleSubmit} className="rounded border border-border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
           {/* Date */}
@@ -118,10 +118,19 @@ const DailyInput = () => {
             </Popover>
           </div>
 
-          {/* User display */}
+          {/* Sales Member dropdown */}
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">User</Label>
-            <Input value={profile?.username || profile?.email || ""} disabled className="border-border bg-muted/30" />
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sales Person</Label>
+            <Select value={teamMemberId} onValueChange={setTeamMemberId}>
+              <SelectTrigger className={cn("border-border bg-muted/50", errors.teamMemberId && "border-destructive")}>
+                <SelectValue placeholder="Select sales person" />
+              </SelectTrigger>
+              <SelectContent>
+                {salesMembers.map((m) => (
+                  <SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">
@@ -152,13 +161,9 @@ const DailyInput = () => {
           <div className="space-y-2">
             <Label className="text-xs uppercase tracking-wider text-muted-foreground">Website</Label>
             <Select value={website} onValueChange={setWebsite}>
-              <SelectTrigger className="border-border bg-muted/50">
-                <SelectValue />
-              </SelectTrigger>
+              <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {WEBSITES.map((w) => (
-                  <SelectItem key={w} value={w}>{w}</SelectItem>
-                ))}
+                {WEBSITES.map((w) => (<SelectItem key={w} value={w}>{w}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
@@ -192,7 +197,7 @@ const DailyInput = () => {
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
-              <TableHead className="text-xs uppercase text-muted-foreground">User</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">Sales Person</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">Signups</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">Deposits</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">1st Dep</TableHead>
@@ -210,7 +215,7 @@ const DailyInput = () => {
               history.map((row: any) => (
                 <TableRow key={row.id} className="border-border">
                   <TableCell>{format(new Date(row.date), "MMM dd")}</TableCell>
-                  <TableCell>{row.profiles?.username || row.profiles?.email || "—"}</TableCell>
+                  <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
                   <TableCell className="text-right">{row.signups_count}</TableCell>
                   <TableCell className="text-right">{row.deposit_count}</TableCell>
                   <TableCell className="text-right">฿{Number(row.first_deposit_amount).toLocaleString()}</TableCell>
