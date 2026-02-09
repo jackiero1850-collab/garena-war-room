@@ -160,7 +160,14 @@ const TeamRoster = () => {
             ) : (
               filtered.map((m) => (
                 <TableRow key={m.id} className="border-border">
-                  <TableCell className="font-medium">{m.name}</TableCell>
+                  <TableCell className="font-medium">
+                    <div className="flex items-center gap-2">
+                      {m.name}
+                      {m.teamName && m.teamName !== "—" && (
+                        <span className="rounded bg-accent/40 px-1.5 py-0.5 text-[10px] font-medium text-accent-foreground">{m.teamName}</span>
+                      )}
+                    </div>
+                  </TableCell>
                   <TableCell>{m.nickname || "—"}</TableCell>
                   <TableCell>
                     <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{m.role}</span>

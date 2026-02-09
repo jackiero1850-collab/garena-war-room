@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2 } from "lucide-react";
+import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
@@ -17,7 +17,7 @@ import { compressToWebp } from "@/lib/imageUtils";
 interface Assignment {
   id: string; title: string; description: string | null; due_date: string;
   type: string; status: string; created_by: string | null; created_at: string;
-  cover_image_url: string | null; website: string | null;
+  cover_image_url: string | null; website: string | null; assigned_to: string | null;
 }
 
 interface Submission {
@@ -32,6 +32,7 @@ const Assignments = () => {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [assignmentTypes, setAssignmentTypes] = useState<{ id: string; name: string }[]>([]);
+  const [rosterMembers, setRosterMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -43,6 +44,7 @@ const Assignments = () => {
   const [newDueDate, setNewDueDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [newType, setNewType] = useState<string>("event");
   const [newWebsite, setNewWebsite] = useState<string>("none");
+  const [newAssignedTo, setNewAssignedTo] = useState<string>("none");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>("");
 
@@ -51,12 +53,13 @@ const Assignments = () => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }] = await Promise.all([
       supabase.from("assignments").select("*").order("due_date", { ascending: true }),
       supabase.from("assignment_submissions").select("*"),
       supabase.from("profiles").select("id, username, email"),
       supabase.from("websites").select("id, name").order("name"),
       supabase.from("master_assignment_types").select("id, name").order("name"),
+      supabase.from("team_members").select("id, name, nickname").order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);
@@ -65,19 +68,24 @@ const Assignments = () => {
     setProfiles(pMap);
     setWebsites((wData as any[]) || []);
     setAssignmentTypes((atData as any[]) || []);
+    setRosterMembers((rmData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
 
+  // Roster member lookup
+  const rosterMap: Record<string, string> = {};
+  rosterMembers.forEach((m) => { rosterMap[m.id] = m.nickname || m.name; });
+
   const openCreate = () => {
     setEditingAssignment(null);
-    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setCoverUrl("");
+    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setNewAssignedTo("none"); setCoverUrl("");
     setShowCreate(true);
   };
 
   const openEdit = (a: Assignment) => {
     setEditingAssignment(a);
-    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setCoverUrl(a.cover_image_url || "");
+    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setCoverUrl(a.cover_image_url || "");
     setShowCreate(true);
   };
 
@@ -102,6 +110,7 @@ const Assignments = () => {
     const payload: any = {
       title: newTitle.trim(), description: newDesc.trim() || null, due_date: newDueDate,
       type: newType, cover_image_url: coverUrl || null, website: newWebsite === "none" ? null : newWebsite,
+      assigned_to: newAssignedTo === "none" ? null : newAssignedTo,
     };
     if (editingAssignment) {
       const { error } = await supabase.from("assignments").update(payload).eq("id", editingAssignment.id);
@@ -172,7 +181,6 @@ const Assignments = () => {
 
   const getAssignmentsForDay = (day: Date) => assignments.filter((a) => isSameDay(new Date(a.due_date), day));
 
-  // Mission view data
   const today = new Date();
   const todayMissions = assignments.filter((a) => isSameDay(new Date(a.due_date), today));
   const incomingMissions = assignments.filter((a) => {
@@ -238,7 +246,7 @@ const Assignments = () => {
               <p className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่มีภารกิจวันนี้</p>
             ) : todayMissions.map((a) => (
               <div key={a.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => { setSelectedAssignment(a); setShowSubmit(true); }}>
+                onClick={() => { setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }}>
                 {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -247,12 +255,15 @@ const Assignments = () => {
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
+                    {a.assigned_to && rosterMap[a.assigned_to] && (
+                      <span className="text-[10px] text-primary flex items-center gap-0.5"><User className="h-2.5 w-2.5" />{rosterMap[a.assigned_to]}</span>
+                    )}
                   </div>
                 </div>
                 {hasSubmitted(a.id) ? (
                   <Badge className="bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] shrink-0"><CheckCircle2 className="mr-1 h-3 w-3" />ส่งแล้ว</Badge>
                 ) : (
-                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setShowSubmit(true); }}>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }}>
                     <Upload className="mr-1 h-3 w-3" /> ส่งงาน
                   </Button>
                 )}
@@ -279,7 +290,12 @@ const Assignments = () => {
                     <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
                     <Badge variant="outline" className="text-[10px] capitalize shrink-0">{a.type}</Badge>
                   </div>
-                  {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
+                  <div className="flex items-center gap-2 mt-0.5">
+                    {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
+                    {a.assigned_to && rosterMap[a.assigned_to] && (
+                      <span className="text-[10px] text-primary flex items-center gap-0.5"><User className="h-2.5 w-2.5" />{rosterMap[a.assigned_to]}</span>
+                    )}
+                  </div>
                 </div>
                 {getCountdownBadge(a.due_date)}
               </div>
@@ -303,6 +319,9 @@ const Assignments = () => {
               <div className="flex items-center gap-2 flex-wrap">
                 <Badge variant="outline" className="capitalize">{selectedAssignment.type}</Badge>
                 {selectedAssignment.website && <Badge variant="outline">{selectedAssignment.website}</Badge>}
+                {selectedAssignment.assigned_to && rosterMap[selectedAssignment.assigned_to] && (
+                  <Badge variant="outline" className="text-primary border-primary/30"><User className="mr-1 h-3 w-3" />{rosterMap[selectedAssignment.assigned_to]}</Badge>
+                )}
                 {getCountdownBadge(selectedAssignment.due_date)}
                 <span className="text-sm text-muted-foreground">กำหนด: {format(new Date(selectedAssignment.due_date), "dd MMM yyyy")}</span>
               </div>
@@ -319,7 +338,7 @@ const Assignments = () => {
               </div>
               <div className="flex gap-2 pt-2">
                 {!hasSubmitted(selectedAssignment.id) ? (
-                  <Button onClick={() => setShowSubmit(true)} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
+                  <Button onClick={() => { setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
                     <Upload className="mr-2 h-4 w-4" /> ส่งหลักฐาน
                   </Button>
                 ) : (
@@ -396,15 +415,31 @@ const Assignments = () => {
                 </Select>
               </div>
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">เว็บไซต์</Label>
-              <Select value={newWebsite} onValueChange={setNewWebsite}>
-                <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">ไม่มี</SelectItem>
-                  {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
-                </SelectContent>
-              </Select>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">เว็บไซต์</Label>
+                <Select value={newWebsite} onValueChange={setNewWebsite}>
+                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ไม่มี</SelectItem>
+                    {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">ผู้รับผิดชอบ</Label>
+                <Select value={newAssignedTo} onValueChange={setNewAssignedTo}>
+                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ไม่ระบุ</SelectItem>
+                    {rosterMembers.length === 0 ? (
+                      <SelectItem value="empty" disabled>ไม่พบสมาชิก</SelectItem>
+                    ) : rosterMembers.map((m) => (
+                      <SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ภาพปก</Label>

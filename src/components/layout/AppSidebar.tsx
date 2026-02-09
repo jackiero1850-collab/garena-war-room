@@ -3,7 +3,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useAppSettings } from "@/hooks/useAppSettings";
 import {
   LayoutDashboard, FileInput, Users, UsersRound, Settings,
-  ClipboardList, Palette, FolderOpen, Crosshair, LogOut, Cog,
+  ClipboardList, Palette, FolderOpen, Crosshair, LogOut, Cog, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,7 @@ const navItems = [
   { label: "ตั้งค่าโปรไฟล์", icon: Settings, path: "/settings", enabled: true },
   { label: "งานที่มอบหมาย", icon: ClipboardList, path: "/assignments", enabled: true },
   { label: "กราฟิกบรีฟ", icon: Palette, path: "/briefs", enabled: true },
+  { label: "ผลงานทีม", icon: BarChart3, path: "/team-performance", enabled: true, leaderUp: true },
   { label: "แหล่งข้อมูล", icon: FolderOpen, path: "/resources", enabled: true },
 ];
 
@@ -43,6 +44,7 @@ const AppSidebar = () => {
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           if (item.managerOnly && role !== "manager") return null;
+          if ((item as any).leaderUp && role !== "manager" && role !== "leader") return null;
           const isActive = location.pathname === item.path;
           return (
             <button
