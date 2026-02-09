@@ -21,14 +21,12 @@ const Dashboard = () => {
   const fetchData = useCallback(async () => {
     const selectedDate = format(date, "yyyy-MM-dd");
 
-    // Daily stats for selected date — now uses team_members for name
     let query = supabase.from("daily_stats").select("*, team_members(name, nickname)").eq("date", selectedDate);
     if (teamId !== "all") query = query.eq("team_id", teamId);
     if (userId !== "all") query = query.eq("team_member_id", userId);
     const { data: dayData } = await query;
     setStats(dayData || []);
 
-    // Monthly stats
     const monthStart = format(startOfMonth(date), "yyyy-MM-dd");
     const monthEnd = format(endOfMonth(date), "yyyy-MM-dd");
     let mQuery = supabase.from("daily_stats").select("*").gte("date", monthStart).lte("date", monthEnd);
@@ -37,7 +35,6 @@ const Dashboard = () => {
     const { data: mData } = await mQuery;
     setMonthlyStats(mData || []);
 
-    // Chart data (last 30 days)
     const chartStart = format(subDays(date, 29), "yyyy-MM-dd");
     let cQuery = supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", selectedDate);
     if (teamId !== "all") cQuery = cQuery.eq("team_id", teamId);
@@ -56,7 +53,6 @@ const Dashboard = () => {
         .map(([d, v]) => ({ date: format(new Date(d), "MMM dd"), ...v }))
     );
 
-    // Leaderboard — group by team_member_id
     let lQuery = supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").eq("date", selectedDate);
     if (teamId !== "all") lQuery = lQuery.eq("team_id", teamId);
     const { data: lData } = await lQuery;
@@ -65,7 +61,7 @@ const Dashboard = () => {
     (lData || []).forEach((r: any) => {
       const mid = r.team_member_id || "unknown";
       if (!userMap[mid]) {
-        userMap[mid] = { name: r.team_members?.nickname || r.team_members?.name || "Unknown", signups: 0, deposits: 0, adSpend: 0 };
+        userMap[mid] = { name: r.team_members?.nickname || r.team_members?.name || "ไม่ทราบ", signups: 0, deposits: 0, adSpend: 0 };
       }
       userMap[mid].signups += r.signups_count;
       userMap[mid].deposits += r.deposit_count;
@@ -86,7 +82,6 @@ const Dashboard = () => {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  // Realtime subscription
   useEffect(() => {
     const channel = supabase
       .channel("dashboard-realtime")
@@ -95,7 +90,6 @@ const Dashboard = () => {
     return () => { supabase.removeChannel(channel); };
   }, [fetchData]);
 
-  // KPI calculations
   const sum = (key: string) => stats.reduce((a, r) => a + Number(r[key] || 0), 0);
   const mSum = (key: string) => monthlyStats.reduce((a, r) => a + Number(r[key] || 0), 0);
 
@@ -113,7 +107,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl text-foreground">Dashboard</h1>
+        <h1 className="font-display text-2xl text-foreground">แดชบอร์ด</h1>
         <DashboardFilters
           date={date} onDateChange={setDate}
           teamId={teamId} onTeamChange={setTeamId}
@@ -121,18 +115,23 @@ const Dashboard = () => {
         />
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-11">
-        <KpiCard title="Signups" value={totalSignups} icon={Users} highlight />
-        <KpiCard title="Depositors" value={totalDepositors} icon={TrendingUp} />
-        <KpiCard title="% Conv." value={`${conversion.toFixed(1)}%`} icon={Percent} />
-        <KpiCard title="1st Deposit" value={`฿${firstDeposit.toLocaleString()}`} icon={DollarSign} />
-        <KpiCard title="Total Dep." value={`฿${totalDeposit.toLocaleString()}`} icon={DollarSign} highlight />
-        <KpiCard title="Ad Spend" value={`$${adSpend.toLocaleString()}`} icon={CreditCard} />
-        <KpiCard title="Cost/Head" value={`$${costPerHead}`} icon={Target} />
-        <KpiCard title="Mo. Signups" value={mSignups} icon={CalendarDays} />
-        <KpiCard title="Mo. Dep." value={mDepositors} icon={BarChart3} />
-        <KpiCard title="Mo. Conv." value={`${mConversion.toFixed(1)}%`} icon={Percent} />
-        <KpiCard title="Expenses" value="—" icon={Wallet} subtitle="Coming soon" />
+      {/* KPI Cards - 2 rows, relaxed spacing */}
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <KpiCard title="ยอดสมัคร" value={totalSignups} icon={Users} highlight />
+        <KpiCard title="ยอดฝาก" value={totalDepositors} icon={TrendingUp} />
+        <KpiCard title="% คอนเวอร์ชั่น" value={`${conversion.toFixed(1)}%`} icon={Percent} />
+        <KpiCard title="ฝากครั้งแรก" value={`฿${firstDeposit.toLocaleString()}`} icon={DollarSign} />
+      </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <KpiCard title="ยอดฝากรวม" value={`฿${totalDeposit.toLocaleString()}`} icon={DollarSign} highlight />
+        <KpiCard title="ค่าโฆษณา" value={`$${adSpend.toLocaleString()}`} icon={CreditCard} />
+        <KpiCard title="ต้นทุน/หัว" value={`$${costPerHead}`} icon={Target} />
+        <KpiCard title="สมัครเดือนนี้" value={mSignups} icon={CalendarDays} />
+      </div>
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+        <KpiCard title="ฝากเดือนนี้" value={mDepositors} icon={BarChart3} />
+        <KpiCard title="คอนเวอร์ชั่น/เดือน" value={`${mConversion.toFixed(1)}%`} icon={Percent} />
+        <KpiCard title="ค่าใช้จ่าย" value="—" icon={Wallet} subtitle="เร็วๆ นี้" />
       </div>
 
       <div className="grid gap-6 lg:grid-cols-5">

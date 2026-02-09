@@ -10,7 +10,7 @@ const StatsChart = ({ data }: { data: ChartData[] }) => {
   return (
     <div className="rounded border border-border bg-card p-4">
       <h3 className="mb-4 font-display text-sm uppercase tracking-wider text-muted-foreground">
-        Performance Over Time
+        ผลงานตลอดช่วงเวลา
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 0, bottom: 5 }}>
@@ -27,8 +27,8 @@ const StatsChart = ({ data }: { data: ChartData[] }) => {
             }}
           />
           <Legend />
-          <Line yAxisId="left" type="monotone" dataKey="signups" stroke="hsl(0, 100%, 50%)" strokeWidth={2} dot={false} name="Signups" />
-          <Line yAxisId="right" type="monotone" dataKey="deposit" stroke="hsl(142, 76%, 36%)" strokeWidth={2} dot={false} name="Total Deposit" />
+          <Line yAxisId="left" type="monotone" dataKey="signups" stroke="hsl(0, 100%, 50%)" strokeWidth={2} dot={false} name="ยอดสมัคร" />
+          <Line yAxisId="right" type="monotone" dataKey="deposit" stroke="hsl(142, 76%, 36%)" strokeWidth={2} dot={false} name="ยอดฝากรวม" />
         </LineChart>
       </ResponsiveContainer>
     </div>

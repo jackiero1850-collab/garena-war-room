@@ -21,24 +21,24 @@ const LeaderboardTable = ({ data }: { data: LeaderboardEntry[] }) => {
     <div className="rounded border border-border bg-card">
       <div className="border-b border-border px-4 py-3">
         <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">
-          Top Sales Leaderboard
+          อันดับเซลส์
         </h3>
       </div>
       <Table>
         <TableHeader>
           <TableRow className="border-border hover:bg-transparent">
             <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">#</TableHead>
-            <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">Name</TableHead>
-            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">Signups</TableHead>
-            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">Cost/Head</TableHead>
-            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">% Conv.</TableHead>
+            <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อ</TableHead>
+            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">สมัคร</TableHead>
+            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">ต้นทุน/หัว</TableHead>
+            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">% คอนเวอร์ชั่น</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {data.length === 0 ? (
             <TableRow>
               <TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">
-                No data available
+                ยังไม่มีข้อมูล
               </TableCell>
             </TableRow>
           ) : (

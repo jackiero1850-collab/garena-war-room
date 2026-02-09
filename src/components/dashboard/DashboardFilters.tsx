@@ -41,7 +41,7 @@ const DashboardFilters = ({
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-[180px] justify-start border-border bg-card text-foreground">
             <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-            {format(date, "MMM dd, yyyy")}
+            {format(date, "dd MMM yyyy")}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
@@ -50,17 +50,17 @@ const DashboardFilters = ({
       </Popover>
 
       <Select value={teamId} onValueChange={onTeamChange}>
-        <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="All Teams" /></SelectTrigger>
+        <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกทีม" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Teams</SelectItem>
+          <SelectItem value="all">ทุกทีม</SelectItem>
           {teams.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
         </SelectContent>
       </Select>
 
       <Select value={userId} onValueChange={onUserChange}>
-        <SelectTrigger className="w-[180px] border-border bg-card"><SelectValue placeholder="All Sales" /></SelectTrigger>
+        <SelectTrigger className="w-[180px] border-border bg-card"><SelectValue placeholder="ทุกคน" /></SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All Sales</SelectItem>
+          <SelectItem value="all">ทุกคน</SelectItem>
           {filteredMembers.map((m) => (<SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>))}
         </SelectContent>
       </Select>

@@ -25,10 +25,10 @@ interface Brief {
 }
 
 const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  queue: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "Queue" },
-  cutting: { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Scissors, label: "Cutting" },
-  done: { color: "bg-warroom-success/20 text-warroom-success border-warroom-success/30", icon: CheckCircle2, label: "Done" },
-  fix: { color: "bg-primary/20 text-primary border-primary/30", icon: RotateCcw, label: "Fix" },
+  queue: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอคิว" },
+  cutting: { color: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Scissors, label: "กำลังตัด" },
+  done: { color: "bg-warroom-success/20 text-warroom-success border-warroom-success/30", icon: CheckCircle2, label: "เสร็จแล้ว" },
+  fix: { color: "bg-primary/20 text-primary border-primary/30", icon: RotateCcw, label: "แก้ไข" },
 };
 
 const GraphicBriefs = () => {
@@ -37,7 +37,6 @@ const GraphicBriefs = () => {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [graphicMembers, setGraphicMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
 
-  // Form state
   const [briefType, setBriefType] = useState("Banner");
   const [description, setDescription] = useState("");
   const [graphicMemberId, setGraphicMemberId] = useState("");
@@ -58,7 +57,6 @@ const GraphicBriefs = () => {
 
   useEffect(() => { fetchData(); }, []);
 
-  // Realtime
   useEffect(() => {
     const channel = supabase
       .channel("briefs-realtime")
@@ -79,9 +77,9 @@ const GraphicBriefs = () => {
     } as any);
     setSubmitting(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Brief submitted" });
+      toast({ title: "ส่งบรีฟแล้ว" });
       setDescription(""); setBriefType("Banner");
       fetchData();
     }
@@ -92,7 +90,7 @@ const GraphicBriefs = () => {
     if (newStatus === "done") update.completion_date = new Date().toISOString();
     const { error } = await supabase.from("graphic_briefs").update(update).eq("id", briefId);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
       fetchData();
     }
@@ -101,18 +99,21 @@ const GraphicBriefs = () => {
   const activeBriefs = briefs.filter((b) => b.status !== "done");
   const doneBriefs = briefs.filter((b) => b.status === "done");
 
+  // Build a lookup for graphic team_member names
+  const graphicMap: Record<string, string> = {};
+  graphicMembers.forEach((g) => { graphicMap[g.id] = g.nickname || g.name; });
+
   return (
     <div className="space-y-6 p-6">
-      <h1 className="font-display text-2xl text-foreground">Graphic Briefs</h1>
+      <h1 className="font-display text-2xl text-foreground">กราฟิกบรีฟ</h1>
 
       <div className="grid gap-6 lg:grid-cols-5">
-        {/* Left: Request Form */}
         <div className="lg:col-span-2">
           <form onSubmit={handleSubmit} className="rounded border border-border bg-card p-5 space-y-4">
-            <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">New Request</h3>
+            <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">คำขอใหม่</h3>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Type</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ประเภท</Label>
               <Select value={briefType} onValueChange={setBriefType}>
                 <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
                 <SelectContent>
@@ -124,12 +125,12 @@ const GraphicBriefs = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Graphic Designer</Label>
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">กราฟิกดีไซเนอร์</Label>
               <Select value={graphicMemberId} onValueChange={setGraphicMemberId}>
-                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="Select designer" /></SelectTrigger>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกดีไซเนอร์" /></SelectTrigger>
                 <SelectContent>
                   {graphicMembers.length === 0 ? (
-                    <SelectItem value="none" disabled>No graphic members found</SelectItem>
+                    <SelectItem value="none" disabled>ไม่พบสมาชิกกราฟิก</SelectItem>
                   ) : (
                     graphicMembers.map((g) => (
                       <SelectItem key={g.id} value={g.id}>{g.nickname || g.name}</SelectItem>
@@ -140,24 +141,23 @@ const GraphicBriefs = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">Description</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="border-border bg-muted/50" placeholder="Describe your brief..." rows={4} />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">รายละเอียด</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="border-border bg-muted/50" placeholder="อธิบายบรีฟ..." rows={4} />
             </div>
 
             <Button type="submit" disabled={submitting} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
               <Layers className="mr-2 h-4 w-4" />
-              {submitting ? "Submitting..." : "Submit Brief"}
+              {submitting ? "กำลังส่ง..." : "ส่งบรีฟ"}
             </Button>
           </form>
         </div>
 
-        {/* Right: Queue Status */}
         <div className="lg:col-span-3 space-y-4">
-          <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">Active Queue</h3>
+          <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">คิวที่กำลังทำ</h3>
 
           {activeBriefs.length === 0 ? (
             <div className="rounded border border-border bg-card p-8 text-center text-sm text-muted-foreground">
-              No active briefs
+              ไม่มีบรีฟที่กำลังทำ
             </div>
           ) : (
             <div className="space-y-2">
@@ -172,29 +172,29 @@ const GraphicBriefs = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {profiles[brief.sales_user_id] || "Unknown"} → {brief.graphic_user_id ? profiles[brief.graphic_user_id] || "Assigned" : "Unassigned"}
+                        {profiles[brief.sales_user_id] || "ไม่ทราบ"} → {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "มอบหมายแล้ว" : "ยังไม่มอบหมาย"}
                       </p>
                       {brief.description && <p className="mt-1 truncate text-xs text-muted-foreground">{brief.description}</p>}
                     </div>
                     <div className="flex shrink-0 gap-1">
-                      {brief.status === "queue" && (role === "manager" || brief.graphic_user_id === user?.id) && (
+                      {brief.status === "queue" && (role === "manager") && (
                         <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "cutting")} className="text-xs">
-                          <Scissors className="mr-1 h-3 w-3" /> Start
+                          <Scissors className="mr-1 h-3 w-3" /> เริ่ม
                         </Button>
                       )}
                       {brief.status === "cutting" && (
                         <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "done")} className="text-xs text-warroom-success">
-                          <CheckCircle2 className="mr-1 h-3 w-3" /> Done
+                          <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จ
                         </Button>
                       )}
                       {(brief.status === "cutting" || brief.status === "done") && (brief.sales_user_id === user?.id || role === "manager") && (
                         <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "fix")} className="text-xs text-destructive">
-                          <RotateCcw className="mr-1 h-3 w-3" /> Fix
+                          <RotateCcw className="mr-1 h-3 w-3" /> แก้ไข
                         </Button>
                       )}
-                      {brief.status === "fix" && (role === "manager" || brief.graphic_user_id === user?.id) && (
+                      {brief.status === "fix" && (role === "manager") && (
                         <Button size="sm" variant="outline" onClick={() => updateStatus(brief.id, "queue")} className="text-xs">
-                          <ArrowRight className="mr-1 h-3 w-3" /> Re-queue
+                          <ArrowRight className="mr-1 h-3 w-3" /> คืนคิว
                         </Button>
                       )}
                     </div>
@@ -206,17 +206,17 @@ const GraphicBriefs = () => {
 
           {doneBriefs.length > 0 && (
             <>
-              <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground mt-6">Completed</h3>
+              <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground mt-6">เสร็จสมบูรณ์</h3>
               <div className="space-y-2">
                 {doneBriefs.slice(0, 10).map((brief) => (
                   <div key={brief.id} className="flex items-center gap-3 rounded border border-border bg-card/50 p-3 opacity-60">
                     <Badge variant="outline" className={STATUS_CONFIG.done.color}>
-                      <CheckCircle2 className="mr-1 h-3 w-3" /> Done
+                      <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จแล้ว
                     </Badge>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {profiles[brief.sales_user_id] || "Unknown"} • {brief.completion_date ? format(new Date(brief.completion_date), "MMM dd") : "—"}
+                        {profiles[brief.sales_user_id] || "ไม่ทราบ"} • {brief.completion_date ? format(new Date(brief.completion_date), "dd MMM") : "—"}
                       </p>
                     </div>
                   </div>
