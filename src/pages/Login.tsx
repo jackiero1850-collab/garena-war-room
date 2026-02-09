@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Crosshair, AlertCircle } from "lucide-react";
+import { Crosshair, AlertCircle, CheckCircle2 } from "lucide-react";
 
 const Login = () => {
+  const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -17,13 +20,29 @@ const Login = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+    setSuccess("");
     setLoading(true);
-    const { error } = await signIn(email, password);
-    setLoading(false);
-    if (error) {
-      setError(error.message);
+
+    if (isSignUp) {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        setSuccess("Check your email to confirm your account, then log in.");
+      }
     } else {
-      navigate("/");
+      const { error } = await signIn(email, password);
+      setLoading(false);
+      if (error) {
+        setError(error.message);
+      } else {
+        navigate("/");
+      }
     }
   };
 
@@ -43,7 +62,7 @@ const Login = () => {
           </p>
         </div>
 
-        {/* Login Form */}
+        {/* Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="rounded border border-border bg-card p-6 space-y-4">
             <div className="space-y-2">
@@ -71,6 +90,7 @@ const Login = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
+                minLength={6}
                 className="border-border bg-muted/50 focus:border-primary"
               />
             </div>
@@ -82,18 +102,34 @@ const Login = () => {
               </div>
             )}
 
+            {success && (
+              <div className="flex items-center gap-2 rounded border border-warroom-success/50 bg-warroom-success/10 p-3 text-sm text-warroom-success">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {success}
+              </div>
+            )}
+
             <Button
               type="submit"
               disabled={loading}
               className="w-full bg-primary font-display text-sm uppercase tracking-widest hover:bg-primary/90 glow-red-sm"
             >
-              {loading ? "Authenticating..." : "Enter War Room"}
+              {loading
+                ? isSignUp ? "Creating Account..." : "Authenticating..."
+                : isSignUp ? "Create Account" : "Enter War Room"}
             </Button>
           </div>
         </form>
 
-        <p className="text-center text-xs text-muted-foreground">
-          Contact your manager for account access
+        <p className="text-center text-sm text-muted-foreground">
+          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
+          <button
+            type="button"
+            onClick={() => { setIsSignUp(!isSignUp); setError(""); setSuccess(""); }}
+            className="font-medium text-primary hover:underline"
+          >
+            {isSignUp ? "Sign In" : "Sign Up"}
+          </button>
         </p>
       </div>
     </div>
