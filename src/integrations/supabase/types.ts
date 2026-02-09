@@ -14,6 +14,77 @@ export type Database = {
   }
   public: {
     Tables: {
+      assignment_submissions: {
+        Row: {
+          assignment_id: string
+          id: string
+          image_proof_urls: string[] | null
+          notes: string | null
+          submitted_at: string
+          user_id: string
+        }
+        Insert: {
+          assignment_id: string
+          id?: string
+          image_proof_urls?: string[] | null
+          notes?: string | null
+          submitted_at?: string
+          user_id: string
+        }
+        Update: {
+          assignment_id?: string
+          id?: string
+          image_proof_urls?: string[] | null
+          notes?: string | null
+          submitted_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "assignment_submissions_assignment_id_fkey"
+            columns: ["assignment_id"]
+            isOneToOne: false
+            referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      assignments: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          due_date: string
+          id: string
+          status: Database["public"]["Enums"]["assignment_status"]
+          title: string
+          type: Database["public"]["Enums"]["assignment_type"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date: string
+          id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          title: string
+          type?: Database["public"]["Enums"]["assignment_type"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          due_date?: string
+          id?: string
+          status?: Database["public"]["Enums"]["assignment_status"]
+          title?: string
+          type?: Database["public"]["Enums"]["assignment_type"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       daily_stats: {
         Row: {
           ad_spend_usd: number
@@ -70,6 +141,48 @@ export type Database = {
           },
         ]
       }
+      graphic_briefs: {
+        Row: {
+          brief_type: string
+          completion_date: string | null
+          created_at: string
+          description: string | null
+          graphic_user_id: string | null
+          id: string
+          request_date: string
+          request_time: string
+          sales_user_id: string
+          status: Database["public"]["Enums"]["brief_status"]
+          updated_at: string
+        }
+        Insert: {
+          brief_type?: string
+          completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          graphic_user_id?: string | null
+          id?: string
+          request_date?: string
+          request_time?: string
+          sales_user_id: string
+          status?: Database["public"]["Enums"]["brief_status"]
+          updated_at?: string
+        }
+        Update: {
+          brief_type?: string
+          completion_date?: string | null
+          created_at?: string
+          description?: string | null
+          graphic_user_id?: string | null
+          id?: string
+          request_date?: string
+          request_time?: string
+          sales_user_id?: string
+          status?: Database["public"]["Enums"]["brief_status"]
+          updated_at?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -107,6 +220,33 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      resources: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          title: string
+          updated_at: string
+          url: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          title: string
+          updated_at?: string
+          url: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          title?: string
+          updated_at?: string
+          url?: string
+        }
+        Relationships: []
       }
       teams: {
         Row: {
@@ -176,6 +316,9 @@ export type Database = {
     }
     Enums: {
       app_role: "manager" | "leader" | "sales" | "graphic"
+      assignment_status: "upcoming" | "active" | "completed"
+      assignment_type: "event" | "live"
+      brief_status: "queue" | "cutting" | "done" | "fix"
       website_name: "MGB-USA" | "UNI-USA" | "MGB-X"
     }
     CompositeTypes: {
@@ -305,6 +448,9 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["manager", "leader", "sales", "graphic"],
+      assignment_status: ["upcoming", "active", "completed"],
+      assignment_type: ["event", "live"],
+      brief_status: ["queue", "cutting", "done", "fix"],
       website_name: ["MGB-USA", "UNI-USA", "MGB-X"],
     },
   },

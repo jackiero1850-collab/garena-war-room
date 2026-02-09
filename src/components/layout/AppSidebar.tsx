@@ -20,9 +20,9 @@ const navItems = [
   { label: "Daily Input", icon: FileInput, path: "/daily-input", enabled: true },
   { label: "User Management", icon: Users, path: "/users", enabled: true, managerOnly: true },
   { label: "Settings", icon: Settings, path: "/settings", enabled: true },
-  { label: "Assignments", icon: ClipboardList, path: "/assignments", enabled: false },
-  { label: "Graphic Briefs", icon: Palette, path: "/briefs", enabled: false },
-  { label: "Resources", icon: FolderOpen, path: "/resources", enabled: false },
+  { label: "Assignments", icon: ClipboardList, path: "/assignments", enabled: true },
+  { label: "Graphic Briefs", icon: Palette, path: "/briefs", enabled: true },
+  { label: "Resources", icon: FolderOpen, path: "/resources", enabled: true },
 ];
 
 const AppSidebar = () => {
