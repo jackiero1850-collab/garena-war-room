@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { User, Camera } from "lucide-react";
+import { compressToWebp } from "@/lib/imageUtils";
 
 const Settings = () => {
   const { user, profile } = useAuth();
@@ -18,16 +19,17 @@ const Settings = () => {
     const file = e.target.files?.[0];
     if (!file || !user) return;
     setUploading(true);
-    const path = `${user.id}/${Date.now()}_${file.name}`;
-    const { error } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
-    if (error) {
-      toast({ title: "Upload failed", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const webpFile = await compressToWebp(file, 512, 0.85);
+      const path = `${user.id}/${Date.now()}_avatar.webp`;
+      const { error } = await supabase.storage.from("avatars").upload(path, webpFile, { upsert: true });
+      if (error) throw error;
       const { data } = supabase.storage.from("avatars").getPublicUrl(path);
       setAvatarUrl(data.publicUrl);
-      // Also save to profile immediately
       await supabase.from("profiles").update({ avatar_url: data.publicUrl }).eq("id", user.id);
-      toast({ title: "Avatar updated" });
+      toast({ title: "อัปเดตรูปโปรไฟล์แล้ว" });
+    } catch (err: any) {
+      toast({ title: "อัปโหลดล้มเหลว", description: err.message, variant: "destructive" });
     }
     setUploading(false);
   };
@@ -38,15 +40,15 @@ const Settings = () => {
     const { error } = await supabase.from("profiles").update({ username, avatar_url: avatarUrl || null }).eq("id", user.id);
     setSaving(false);
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Profile updated" });
+      toast({ title: "บันทึกโปรไฟล์แล้ว" });
     }
   };
 
   return (
     <div className="mx-auto max-w-lg space-y-6 p-6">
-      <h1 className="font-display text-2xl text-foreground">Settings</h1>
+      <h1 className="font-display text-2xl text-foreground">ตั้งค่าโปรไฟล์</h1>
 
       <div className="rounded border border-border bg-card p-6 space-y-6">
         <div className="flex items-center gap-4">
@@ -66,17 +68,17 @@ const Settings = () => {
           <div>
             <p className="font-medium text-foreground">{profile?.email}</p>
             <p className="text-sm text-muted-foreground">ID: {user?.id?.slice(0, 8)}...</p>
-            {uploading && <p className="text-xs text-primary">Uploading...</p>}
+            {uploading && <p className="text-xs text-primary">กำลังอัปโหลด...</p>}
           </div>
         </div>
 
         <div className="space-y-2">
-          <Label className="text-xs uppercase tracking-wider text-muted-foreground">Username</Label>
+          <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อผู้ใช้</Label>
           <Input value={username} onChange={(e) => setUsername(e.target.value)} className="border-border bg-muted/50" />
         </div>
 
         <Button onClick={handleSave} disabled={saving} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
-          {saving ? "Saving..." : "Save Changes"}
+          {saving ? "กำลังบันทึก..." : "บันทึก"}
         </Button>
       </div>
     </div>

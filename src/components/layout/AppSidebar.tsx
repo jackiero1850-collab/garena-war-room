@@ -1,30 +1,23 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  LayoutDashboard,
-  FileInput,
-  Users,
-  UsersRound,
-  Settings,
-  ClipboardList,
-  Palette,
-  FolderOpen,
-  Crosshair,
-  LogOut,
+  LayoutDashboard, FileInput, Users, UsersRound, Settings,
+  ClipboardList, Palette, FolderOpen, Crosshair, LogOut, Cog,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 
 const navItems = [
-  { label: "Dashboard", icon: LayoutDashboard, path: "/", enabled: true },
-  { label: "Daily Input", icon: FileInput, path: "/daily-input", enabled: true },
-  { label: "User Management", icon: Users, path: "/users", enabled: true, managerOnly: true },
-  { label: "Team Roster", icon: UsersRound, path: "/roster", enabled: true, managerOnly: true },
-  { label: "Settings", icon: Settings, path: "/settings", enabled: true },
-  { label: "Assignments", icon: ClipboardList, path: "/assignments", enabled: true },
-  { label: "Graphic Briefs", icon: Palette, path: "/briefs", enabled: true },
-  { label: "Resources", icon: FolderOpen, path: "/resources", enabled: true },
+  { label: "แดชบอร์ด", icon: LayoutDashboard, path: "/", enabled: true },
+  { label: "ลงข้อมูลรายวัน", icon: FileInput, path: "/daily-input", enabled: true },
+  { label: "จัดการผู้ใช้", icon: Users, path: "/users", enabled: true, managerOnly: true },
+  { label: "ทีมรอสเตอร์", icon: UsersRound, path: "/roster", enabled: true, managerOnly: true },
+  { label: "ตั้งค่าระบบ", icon: Cog, path: "/system-settings", enabled: true, managerOnly: true },
+  { label: "ตั้งค่าโปรไฟล์", icon: Settings, path: "/settings", enabled: true },
+  { label: "งานที่มอบหมาย", icon: ClipboardList, path: "/assignments", enabled: true },
+  { label: "กราฟิกบรีฟ", icon: Palette, path: "/briefs", enabled: true },
+  { label: "แหล่งข้อมูล", icon: FolderOpen, path: "/resources", enabled: true },
 ];
 
 const AppSidebar = () => {
@@ -34,7 +27,6 @@ const AppSidebar = () => {
 
   return (
     <aside className="flex h-screen w-60 flex-col border-r border-border bg-sidebar">
-      {/* Logo */}
       <div className="flex items-center gap-3 border-b border-border px-4 py-4">
         <div className="flex h-8 w-8 items-center justify-center rounded border border-primary/50 bg-primary/10">
           <Crosshair className="h-4 w-4 text-primary" />
@@ -42,7 +34,6 @@ const AppSidebar = () => {
         <span className="font-display text-lg tracking-wider text-foreground">WAR ROOM</span>
       </div>
 
-      {/* Nav */}
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           if (item.managerOnly && role !== "manager") return null;
@@ -63,9 +54,6 @@ const AppSidebar = () => {
             >
               <item.icon className="h-4 w-4" />
               <span className="font-medium">{item.label}</span>
-              {!item.enabled && (
-                <span className="ml-auto text-[10px] uppercase tracking-wider text-muted-foreground/30">Soon</span>
-              )}
             </button>
           );
         })}
@@ -73,16 +61,13 @@ const AppSidebar = () => {
 
       <Separator />
 
-      {/* User */}
       <div className="p-3">
         <div className="flex items-center gap-3 rounded bg-muted/30 px-3 py-2">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/20 text-xs font-bold text-primary">
             {(profile?.username || profile?.email || "?")[0].toUpperCase()}
           </div>
           <div className="flex-1 min-w-0">
-            <p className="truncate text-sm font-medium text-foreground">
-              {profile?.username || profile?.email}
-            </p>
+            <p className="truncate text-sm font-medium text-foreground">{profile?.username || profile?.email}</p>
             <p className="text-xs capitalize text-muted-foreground">{role || "user"}</p>
           </div>
           <Button variant="ghost" size="icon" onClick={signOut} className="h-8 w-8 text-muted-foreground hover:text-destructive">

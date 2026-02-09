@@ -13,27 +13,33 @@ import { CalendarIcon, Plus, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
-const WEBSITES = ["MGB-USA", "UNI-USA", "MGB-X"] as const;
-
 const DailyInput = () => {
   const { user, profile } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
   const [teamMemberId, setTeamMemberId] = useState("");
   const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [signups, setSignups] = useState("");
   const [deposits, setDeposits] = useState("");
   const [firstDep, setFirstDep] = useState("");
   const [totalDep, setTotalDep] = useState("");
   const [adSpend, setAdSpend] = useState("");
-  const [website, setWebsite] = useState<string>("MGB-USA");
+  const [website, setWebsite] = useState<string>("");
   const [contentLink, setContentLink] = useState("");
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
 
   useEffect(() => {
-    supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name")
-      .then(({ data }) => setSalesMembers((data as any[]) || []));
+    Promise.all([
+      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
+      supabase.from("websites").select("id, name").order("name"),
+    ]).then(([{ data: mData }, { data: wData }]) => {
+      setSalesMembers((mData as any[]) || []);
+      const ws = (wData as any[]) || [];
+      setWebsites(ws);
+      if (ws.length > 0 && !website) setWebsite(ws[0].name);
+    });
   }, []);
 
   const fetchHistory = async () => {
@@ -65,9 +71,6 @@ const DailyInput = () => {
     e.preventDefault();
     if (!validate() || !user) return;
 
-    // Get the team_id from the selected member
-    const member = salesMembers.find(m => m.id === teamMemberId);
-
     setSubmitting(true);
     const { error } = await supabase.from("daily_stats").insert({
       user_id: user.id,
@@ -85,9 +88,9 @@ const DailyInput = () => {
     setSubmitting(false);
 
     if (error) {
-      toast({ title: "Error", description: error.message, variant: "destructive" });
+      toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Success", description: "Daily stats submitted" });
+      toast({ title: "สำเร็จ", description: "บันทึกข้อมูลแล้ว" });
       setSignups(""); setDeposits(""); setFirstDep(""); setTotalDep(""); setAdSpend(""); setContentLink("");
       fetchHistory();
     }
@@ -98,18 +101,17 @@ const DailyInput = () => {
 
   return (
     <div className="space-y-6 p-6">
-      <h1 className="font-display text-2xl text-foreground">Daily Input</h1>
+      <h1 className="font-display text-2xl text-foreground">ลงข้อมูลรายวัน</h1>
 
       <form onSubmit={handleSubmit} className="rounded border border-border bg-card p-6">
         <div className="grid gap-4 md:grid-cols-3 lg:grid-cols-4">
-          {/* Date */}
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Date</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">วันที่</Label>
             <Popover>
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start border-border bg-muted/50">
                   <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                  {format(date, "MMM dd, yyyy")}
+                  {format(date, "dd MMM yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -118,12 +120,11 @@ const DailyInput = () => {
             </Popover>
           </div>
 
-          {/* Sales Member dropdown */}
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Sales Person</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">เซลส์</Label>
             <Select value={teamMemberId} onValueChange={setTeamMemberId}>
               <SelectTrigger className={cn("border-border bg-muted/50", errors.teamMemberId && "border-destructive")}>
-                <SelectValue placeholder="Select sales person" />
+                <SelectValue placeholder="เลือกเซลส์" />
               </SelectTrigger>
               <SelectContent>
                 {salesMembers.map((m) => (
@@ -134,87 +135,86 @@ const DailyInput = () => {
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Signups</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ยอดสมัคร</Label>
             <Input type="number" min="0" value={signups} onChange={(e) => setSignups(e.target.value)} className={inputClass("signups")} placeholder="0" />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Deposits</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ยอดฝาก</Label>
             <Input type="number" min="0" value={deposits} onChange={(e) => setDeposits(e.target.value)} className={inputClass("deposits")} placeholder="0" />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">First Dep. (THB)</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ฝากครั้งแรก (฿)</Label>
             <Input type="number" min="0" step="0.01" value={firstDep} onChange={(e) => setFirstDep(e.target.value)} className={inputClass("firstDep")} placeholder="0.00" />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Total Dep. (THB)</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ยอดฝากรวม (฿)</Label>
             <Input type="number" min="0" step="0.01" value={totalDep} onChange={(e) => setTotalDep(e.target.value)} className={inputClass("totalDep")} placeholder="0.00" />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Ad Spend (USD)</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ค่าโฆษณา ($)</Label>
             <Input type="number" min="0" step="0.01" value={adSpend} onChange={(e) => setAdSpend(e.target.value)} className={inputClass("adSpend")} placeholder="0.00" />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Website</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">เว็บไซต์</Label>
             <Select value={website} onValueChange={setWebsite}>
               <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {WEBSITES.map((w) => (<SelectItem key={w} value={w}>{w}</SelectItem>))}
+                {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <Label className="text-xs uppercase tracking-wider text-muted-foreground">Content Link</Label>
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">ลิงก์คอนเทนต์</Label>
             <Input value={contentLink} onChange={(e) => setContentLink(e.target.value)} className={inputClass("contentLink")} placeholder="https://..." />
           </div>
 
           <div className="flex items-end">
             <Button type="submit" disabled={submitting} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
               <Plus className="mr-2 h-4 w-4" />
-              {submitting ? "Submitting..." : "Submit"}
+              {submitting ? "กำลังบันทึก..." : "บันทึก"}
             </Button>
           </div>
         </div>
 
         {Object.keys(errors).length > 0 && (
           <div className="mt-3 flex items-center gap-2 text-xs text-destructive">
-            <AlertCircle className="h-3 w-3" /> All fields are required
+            <AlertCircle className="h-3 w-3" /> กรุณากรอกข้อมูลให้ครบทุกช่อง
           </div>
         )}
       </form>
 
-      {/* History Table */}
       <div className="rounded border border-border bg-card">
         <div className="border-b border-border px-4 py-3">
-          <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">History</h3>
+          <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">ประวัติ</h3>
         </div>
         <Table>
           <TableHeader>
             <TableRow className="border-border hover:bg-transparent">
-              <TableHead className="text-xs uppercase text-muted-foreground">Date</TableHead>
-              <TableHead className="text-xs uppercase text-muted-foreground">Sales Person</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">Signups</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">Deposits</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">1st Dep</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">Total Dep</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">Ad Spend</TableHead>
-              <TableHead className="text-xs uppercase text-muted-foreground">Website</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">วันที่</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">เซลส์</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">สมัคร</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝาก</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากแรก</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากรวม</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">โฆษณา</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {history.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">No entries yet</TableCell>
+                <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีข้อมูล</TableCell>
               </TableRow>
             ) : (
               history.map((row: any) => (
                 <TableRow key={row.id} className="border-border">
-                  <TableCell>{format(new Date(row.date), "MMM dd")}</TableCell>
+                  <TableCell>{format(new Date(row.date), "dd MMM")}</TableCell>
                   <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
                   <TableCell className="text-right">{row.signups_count}</TableCell>
                   <TableCell className="text-right">{row.deposit_count}</TableCell>
