@@ -237,10 +237,14 @@ const Assignments = () => {
             {todayMissions.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่มีภารกิจวันนี้</p>
             ) : todayMissions.map((a) => (
-              <div key={a.id} className="flex items-center gap-3 px-4 py-3">
+              <div key={a.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
+                onClick={() => { setSelectedAssignment(a); setShowSubmit(true); }}>
                 {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                    <Badge variant="outline" className="text-[10px] capitalize shrink-0">{a.type}</Badge>
+                  </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
                   </div>
@@ -248,7 +252,7 @@ const Assignments = () => {
                 {hasSubmitted(a.id) ? (
                   <Badge className="bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] shrink-0"><CheckCircle2 className="mr-1 h-3 w-3" />ส่งแล้ว</Badge>
                 ) : (
-                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={() => { setSelectedAssignment(a); setShowSubmit(true); }}>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setShowSubmit(true); }}>
                     <Upload className="mr-1 h-3 w-3" /> ส่งงาน
                   </Button>
                 )}
@@ -271,7 +275,10 @@ const Assignments = () => {
               <div key={a.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors" onClick={() => setSelectedAssignment(a)}>
                 {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
                 <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
+                    <Badge variant="outline" className="text-[10px] capitalize shrink-0">{a.type}</Badge>
+                  </div>
                   {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
                 </div>
                 {getCountdownBadge(a.due_date)}
@@ -382,7 +389,9 @@ const Assignments = () => {
                 <Select value={newType} onValueChange={setNewType}>
                   <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {assignmentTypes.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
+                    {assignmentTypes.length === 0 ? (
+                      <SelectItem value="none" disabled>ไม่พบประเภท — เพิ่มในตั้งค่าระบบ</SelectItem>
+                    ) : assignmentTypes.map((t) => (<SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>))}
                   </SelectContent>
                 </Select>
               </div>

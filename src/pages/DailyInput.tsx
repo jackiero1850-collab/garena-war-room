@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
 const DailyInput = () => {
-  const { user, profile } = useAuth();
+  const { user, profile, role } = useAuth();
   const [date, setDate] = useState<Date>(new Date());
   const [teamMemberId, setTeamMemberId] = useState("");
   const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null; team_id: string | null }[]>([]);
@@ -44,15 +44,20 @@ const DailyInput = () => {
 
   const fetchHistory = async () => {
     if (!user) return;
-    const { data } = await supabase
+    let query = supabase
       .from("daily_stats")
       .select("*, team_members(name, nickname)")
       .order("date", { ascending: false })
       .limit(50);
+    // Non-managers only see their own entries
+    if (role !== "manager") {
+      query = query.eq("user_id", user.id);
+    }
+    const { data } = await query;
     setHistory(data || []);
   };
 
-  useEffect(() => { fetchHistory(); }, [user]);
+  useEffect(() => { fetchHistory(); }, [user, role]);
 
   // Auto-fetch team_id when selecting a salesperson
   const selectedMember = salesMembers.find((m) => m.id === teamMemberId);
@@ -131,7 +136,9 @@ const DailyInput = () => {
                 <SelectValue placeholder="เลือกเซลส์" />
               </SelectTrigger>
               <SelectContent>
-                {salesMembers.map((m) => (
+                {salesMembers.length === 0 ? (
+                  <SelectItem value="none" disabled>ไม่พบเซลส์</SelectItem>
+                ) : salesMembers.map((m) => (
                   <SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>
                 ))}
               </SelectContent>
@@ -171,7 +178,9 @@ const DailyInput = () => {
             <Select value={website} onValueChange={setWebsite}>
               <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
               <SelectContent>
-                {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
+                {websites.length === 0 ? (
+                  <SelectItem value="none" disabled>ไม่พบเว็บไซต์</SelectItem>
+                ) : websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
               </SelectContent>
             </Select>
           </div>

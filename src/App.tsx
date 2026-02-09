@@ -19,8 +19,8 @@ import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { user, loading } = useAuth();
+const ProtectedRoute = ({ children, managerOnly }: { children: React.ReactNode; managerOnly?: boolean }) => {
+  const { user, loading, role } = useAuth();
   if (loading) {
     return (
       <div className="flex h-screen items-center justify-center bg-background">
@@ -29,6 +29,7 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
     );
   }
   if (!user) return <Navigate to="/login" replace />;
+  if (managerOnly && role !== "manager") return <Navigate to="/" replace />;
   return <AppLayout>{children}</AppLayout>;
 };
 
@@ -50,9 +51,9 @@ const App = () => (
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/daily-input" element={<ProtectedRoute><DailyInput /></ProtectedRoute>} />
-            <Route path="/users" element={<ProtectedRoute><UserManagement /></ProtectedRoute>} />
-            <Route path="/roster" element={<ProtectedRoute><TeamRoster /></ProtectedRoute>} />
-            <Route path="/system-settings" element={<ProtectedRoute><SystemSettings /></ProtectedRoute>} />
+            <Route path="/users" element={<ProtectedRoute managerOnly><UserManagement /></ProtectedRoute>} />
+            <Route path="/roster" element={<ProtectedRoute managerOnly><TeamRoster /></ProtectedRoute>} />
+            <Route path="/system-settings" element={<ProtectedRoute managerOnly><SystemSettings /></ProtectedRoute>} />
             <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
             <Route path="/assignments" element={<ProtectedRoute><Assignments /></ProtectedRoute>} />
             <Route path="/briefs" element={<ProtectedRoute><GraphicBriefs /></ProtectedRoute>} />

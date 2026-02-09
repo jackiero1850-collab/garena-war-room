@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { startOfMonth, format, endOfMonth, subDays } from "date-fns";
+import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
   Users, TrendingUp, DollarSign, BarChart3, Percent, Target, CreditCard, CalendarDays, Wallet, Download,
@@ -13,6 +14,7 @@ import { Button } from "@/components/ui/button";
 const THB_RATE = 34;
 
 const Dashboard = () => {
+  const { role } = useAuth();
   const today = new Date();
   const [date, setDate] = useState(today);
   const [teamId, setTeamId] = useState("all");
@@ -137,9 +139,11 @@ const Dashboard = () => {
             teamId={teamId} onTeamChange={setTeamId}
             userId={userId} onUserChange={setUserId}
           />
-          <Button variant="outline" onClick={exportCSV} className="border-border bg-card gap-2">
-            <Download className="h-4 w-4 text-primary" /> Export CSV
-          </Button>
+          {role === "manager" && (
+            <Button variant="outline" onClick={exportCSV} className="border-border bg-card gap-2">
+              <Download className="h-4 w-4 text-primary" /> Export CSV
+            </Button>
+          )}
         </div>
       </div>
 
