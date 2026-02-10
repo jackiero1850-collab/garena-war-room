@@ -6,8 +6,9 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Shield, CalendarIcon, Search, Trophy } from "lucide-react";
+import { Shield, CalendarIcon, Search, Trophy, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
 
 const TeamPerformance = () => {
   const { user, role, profile } = useAuth();
@@ -17,10 +18,16 @@ const TeamPerformance = () => {
   const [dateTo, setDateTo] = useState(format(endOfMonth(new Date()), "yyyy-MM-dd"));
   const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [selectedTeamId, setSelectedTeamId] = useState("all");
+  const [websiteFilter, setWebsiteFilter] = useState("all");
+  const [websiteOptions, setWebsiteOptions] = useState<string[]>([]);
 
   useEffect(() => {
     supabase.from("teams").select("id, name").order("name").then(({ data }) => {
       setTeams((data as any[]) || []);
+    });
+    supabase.from("daily_stats").select("website_name").then(({ data }) => {
+      const unique = [...new Set((data || []).map((r: any) => r.website_name).filter(Boolean))].sort();
+      setWebsiteOptions(unique as string[]);
     });
   }, []);
 
@@ -34,18 +41,21 @@ const TeamPerformance = () => {
       .lte("date", dateTo)
       .order("date", { ascending: false });
 
-    // Leader/Sales: filter by own team
     if ((role === "leader" || role === "sales") && profile?.team_id) {
       query = query.eq("team_id", profile.team_id);
     } else if (role === "manager" && selectedTeamId !== "all") {
       query = query.eq("team_id", selectedTeamId);
     }
 
+    if (websiteFilter !== "all") {
+      query = query.eq("website_name", websiteFilter);
+    }
+
     const { data } = await query;
     setRows(data || []);
   };
 
-  useEffect(() => { fetchData(); }, [user, role, dateFrom, dateTo, selectedTeamId]);
+  useEffect(() => { fetchData(); }, [user, role, dateFrom, dateTo, selectedTeamId, websiteFilter]);
 
   if (role !== "manager" && role !== "leader" && role !== "sales") {
     return (
@@ -57,6 +67,23 @@ const TeamPerformance = () => {
       </div>
     );
   }
+
+  const handleDelete = async (id: string, rowTeamId: string | null) => {
+    if (!confirm("ต้องการลบข้อมูลนี้?")) return;
+    const { error } = await supabase.from("daily_stats").delete().eq("id", id);
+    if (error) {
+      toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "ลบแล้ว" });
+      fetchData();
+    }
+  };
+
+  const canDelete = (rowTeamId: string | null) => {
+    if (role === "manager") return true;
+    if (role === "leader" && profile?.team_id && rowTeamId === profile.team_id) return true;
+    return false;
+  };
 
   const filtered = rows.filter((r) => {
     const name = r.team_members?.nickname || r.team_members?.name || "";
@@ -101,7 +128,6 @@ const TeamPerformance = () => {
         </div>
         <Button onClick={fetchData} variant="outline" className="gap-2"><CalendarIcon className="h-4 w-4" /> ค้นหา</Button>
 
-        {/* Team dropdown — only for Manager */}
         {role === "manager" && (
           <Select value={selectedTeamId} onValueChange={setSelectedTeamId}>
             <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกทีม" /></SelectTrigger>
@@ -111,6 +137,14 @@ const TeamPerformance = () => {
             </SelectContent>
           </Select>
         )}
+
+        <Select value={websiteFilter} onValueChange={setWebsiteFilter}>
+          <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกเว็บ" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">ทุกเว็บไซต์</SelectItem>
+            {websiteOptions.map((w) => (<SelectItem key={w} value={w}>{w}</SelectItem>))}
+          </SelectContent>
+        </Select>
 
         <div className="relative ml-auto">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
@@ -131,11 +165,14 @@ const TeamPerformance = () => {
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากรวม (฿)</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">โฆษณา (฿)</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
+              {(role === "manager" || role === "leader") && (
+                <TableHead className="text-xs uppercase text-muted-foreground w-12"></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">ไม่มีข้อมูล</TableCell></TableRow>
+              <TableRow><TableCell colSpan={10} className="py-8 text-center text-sm text-muted-foreground">ไม่มีข้อมูล</TableCell></TableRow>
             ) : filtered.map((r: any) => {
               const mid = r.team_member_id || "unknown";
               const rank = rankMap[mid];
@@ -150,6 +187,15 @@ const TeamPerformance = () => {
                   <TableCell className="text-right">฿{Number(r.total_deposit_amount).toLocaleString()}</TableCell>
                   <TableCell className="text-right">฿{Math.round(Number(r.ad_spend_usd) * 34).toLocaleString()}</TableCell>
                   <TableCell>{r.website_name}</TableCell>
+                  {(role === "manager" || role === "leader") && (
+                    <TableCell>
+                      {canDelete(r.team_id) && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(r.id, r.team_id)}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               );
             })}

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, TrendingUp, DollarSign, BarChart3, Percent, Target, CreditCard, CalendarDays, Wallet, Download,
 } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import KpiCard from "@/components/dashboard/KpiCard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import StatsChart from "@/components/dashboard/StatsChart";
@@ -20,6 +21,8 @@ const Dashboard = () => {
   const [date, setDate] = useState(today);
   const [teamId, setTeamId] = useState("all");
   const [userId, setUserId] = useState("all");
+  const [websiteFilter, setWebsiteFilter] = useState("all");
+  const [websiteOptions, setWebsiteOptions] = useState<string[]>([]);
   const [stats, setStats] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
@@ -49,6 +52,14 @@ const Dashboard = () => {
     checkTodayEvents();
   }, []);
 
+  // Fetch unique website names for filter
+  useEffect(() => {
+    supabase.from("daily_stats").select("website_name").then(({ data }) => {
+      const unique = [...new Set((data || []).map((r: any) => r.website_name).filter(Boolean))].sort();
+      setWebsiteOptions(unique as string[]);
+    });
+  }, []);
+
   const fetchData = useCallback(async () => {
     const monthStart = format(startOfMonth(date), "yyyy-MM-dd");
     const selectedDate = format(date, "yyyy-MM-dd");
@@ -57,6 +68,7 @@ const Dashboard = () => {
       ? supabase.from("daily_stats").select("*, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("*, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
     if (userId !== "all") mQuery = mQuery.eq("team_member_id", userId);
+    if (websiteFilter !== "all") mQuery = mQuery.eq("website_name", websiteFilter);
     const { data: mData } = await mQuery;
     setStats(mData || []);
 
@@ -66,6 +78,7 @@ const Dashboard = () => {
       ? supabase.from("daily_stats").select("date, signups_count, total_deposit_amount, team_members!inner(team_id)").gte("date", chartStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("date, signups_count, total_deposit_amount").gte("date", chartStart).lte("date", selectedDate);
     if (userId !== "all") cQuery = cQuery.eq("team_member_id", userId);
+    if (websiteFilter !== "all") cQuery = cQuery.eq("website_name", websiteFilter);
     const { data: cData } = await cQuery;
 
     const byDate: Record<string, { signups: number; deposit: number }> = {};
@@ -84,6 +97,7 @@ const Dashboard = () => {
     let lQuery = teamId !== "all"
       ? supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
+    if (websiteFilter !== "all") lQuery = lQuery.eq("website_name", websiteFilter);
     const { data: lData } = await lQuery;
 
     const userMap: Record<string, { name: string; signups: number; deposits: number; adSpend: number }> = {};
@@ -107,7 +121,7 @@ const Dashboard = () => {
           conversion: u.signups > 0 ? (u.deposits / u.signups) * 100 : 0,
         }))
     );
-  }, [date, teamId, userId]);
+  }, [date, teamId, userId, websiteFilter]);
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
@@ -180,6 +194,13 @@ const Dashboard = () => {
             teamId={teamId} onTeamChange={setTeamId}
             userId={userId} onUserChange={setUserId}
           />
+          <Select value={websiteFilter} onValueChange={setWebsiteFilter}>
+            <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกเว็บ" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">ทุกเว็บไซต์</SelectItem>
+              {websiteOptions.map((w) => (<SelectItem key={w} value={w}>{w}</SelectItem>))}
+            </SelectContent>
+          </Select>
           {role === "manager" && (
             <Button variant="outline" onClick={exportCSV} className="border-border bg-card gap-2">
               <Download className="h-4 w-4 text-primary" /> Export CSV

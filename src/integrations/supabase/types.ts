@@ -148,7 +148,7 @@ export type Database = {
           total_deposit_amount: number
           updated_at: string
           user_id: string
-          website_name: Database["public"]["Enums"]["website_name"]
+          website_name: string
         }
         Insert: {
           ad_spend_usd?: number
@@ -164,7 +164,7 @@ export type Database = {
           total_deposit_amount?: number
           updated_at?: string
           user_id: string
-          website_name?: Database["public"]["Enums"]["website_name"]
+          website_name?: string
         }
         Update: {
           ad_spend_usd?: number
@@ -180,7 +180,7 @@ export type Database = {
           total_deposit_amount?: number
           updated_at?: string
           user_id?: string
-          website_name?: Database["public"]["Enums"]["website_name"]
+          website_name?: string
         }
         Relationships: [
           {
@@ -501,7 +501,6 @@ export type Database = {
       assignment_status: "upcoming" | "active" | "completed"
       assignment_type: "event" | "live"
       brief_status: "queue" | "cutting" | "done" | "fix"
-      website_name: "MGB-USA" | "UNI-USA" | "MGB-X"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -633,7 +632,6 @@ export const Constants = {
       assignment_status: ["upcoming", "active", "completed"],
       assignment_type: ["event", "live"],
       brief_status: ["queue", "cutting", "done", "fix"],
-      website_name: ["MGB-USA", "UNI-USA", "MGB-X"],
     },
   },
 } as const
