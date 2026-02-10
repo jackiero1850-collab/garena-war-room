@@ -5,13 +5,16 @@ import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, Plus, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+
+const THB_RATE = 34;
 
 const DailyInput = () => {
   const { user, profile, role } = useAuth();
@@ -26,6 +29,7 @@ const DailyInput = () => {
   const [adSpend, setAdSpend] = useState("");
   const [website, setWebsite] = useState<string>("");
   const [contentLink, setContentLink] = useState("");
+  const [note, setNote] = useState("");
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [history, setHistory] = useState<any[]>([]);
@@ -91,6 +95,7 @@ const DailyInput = () => {
       ad_spend_usd: parseFloat(adSpend),
       website_name: website,
       content_link: contentLink.trim(),
+      note: note.trim() || null,
     });
     setSubmitting(false);
 
@@ -98,13 +103,18 @@ const DailyInput = () => {
       toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "สำเร็จ", description: "บันทึกข้อมูลแล้ว" });
-      setSignups(""); setDeposits(""); setFirstDep(""); setTotalDep(""); setAdSpend(""); setContentLink("");
+      setSignups(""); setDeposits(""); setFirstDep(""); setTotalDep(""); setAdSpend(""); setContentLink(""); setNote("");
       fetchHistory();
     }
   };
 
   const inputClass = (field: string) =>
     cn("border-border bg-muted/50 focus:border-primary", errors[field] && "border-destructive");
+
+  // Summary calculations
+  const sumSignups = history.reduce((a, r) => a + Number(r.signups_count || 0), 0);
+  const sumDeposits = history.reduce((a, r) => a + Number(r.deposit_count || 0), 0);
+  const sumAdSpend = history.reduce((a, r) => a + Number(r.ad_spend_usd || 0), 0);
 
   return (
     <div className="space-y-6 p-6">
@@ -188,6 +198,11 @@ const DailyInput = () => {
             <Input value={contentLink} onChange={(e) => setContentLink(e.target.value)} className={inputClass("contentLink")} placeholder="https://..." />
           </div>
 
+          <div className="space-y-2 md:col-span-2">
+            <Label className="text-xs uppercase tracking-wider text-muted-foreground">หมายเหตุ</Label>
+            <Textarea value={note} onChange={(e) => setNote(e.target.value)} className="border-border bg-muted/50 focus:border-primary" placeholder="หมายเหตุเพิ่มเติม (ไม่บังคับ)" rows={2} />
+          </div>
+
           <div className="flex items-end">
             <Button type="submit" disabled={submitting} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
               <Plus className="mr-2 h-4 w-4" />
@@ -203,7 +218,7 @@ const DailyInput = () => {
         )}
       </form>
 
-      <div className="rounded border border-border bg-card">
+      <div className="rounded border border-border bg-card overflow-x-auto">
         <div className="border-b border-border px-4 py-3">
           <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">ประวัติ</h3>
         </div>
@@ -214,10 +229,14 @@ const DailyInput = () => {
               <TableHead className="text-xs uppercase text-muted-foreground">เซลส์</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">สมัคร</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝาก</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">% Conv</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากแรก</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากรวม</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">โฆษณา</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground">ต้นทุน/หัว</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">ลิงก์</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">หมายเหตุ</TableHead>
               {(role === "manager" || role === "leader") && (
                 <TableHead className="text-xs uppercase text-muted-foreground w-12"></TableHead>
               )}
@@ -226,37 +245,68 @@ const DailyInput = () => {
           <TableBody>
             {history.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีข้อมูล</TableCell>
+                <TableCell colSpan={13} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีข้อมูล</TableCell>
               </TableRow>
             ) : (
-              history.map((row: any) => (
-                <TableRow key={row.id} className="border-border">
-                  <TableCell>{format(new Date(row.date), "dd-MM-yyyy")}</TableCell>
-                  <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
-                  <TableCell className="text-right">{row.signups_count}</TableCell>
-                  <TableCell className="text-right">{row.deposit_count}</TableCell>
-                  <TableCell className="text-right">฿{Number(row.first_deposit_amount).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">฿{Number(row.total_deposit_amount).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">฿{Math.round(Number(row.ad_spend_usd) * 34).toLocaleString()}</TableCell>
-                  <TableCell>{row.website_name}</TableCell>
-                  {(role === "manager" || role === "leader") && (
-                    <TableCell>
-                      {(role === "manager" || (role === "leader" && profile?.team_id && row.team_id === profile.team_id)) && (
-                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
-                          if (!confirm("ต้องการลบข้อมูลนี้?")) return;
-                          const { error } = await supabase.from("daily_stats").delete().eq("id", row.id);
-                          if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); }
-                          else { toast({ title: "ลบแล้ว" }); fetchHistory(); }
-                        }}>
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      )}
+              history.map((row: any) => {
+                const rowSignups = Number(row.signups_count || 0);
+                const rowDeposits = Number(row.deposit_count || 0);
+                const conv = rowSignups > 0 ? ((rowDeposits / rowSignups) * 100).toFixed(1) : "0.0";
+                const costHead = rowSignups > 0 ? Math.round((Number(row.ad_spend_usd) * THB_RATE) / rowSignups) : 0;
+                return (
+                  <TableRow key={row.id} className="border-border">
+                    <TableCell>{format(new Date(row.date), "dd-MM-yyyy")}</TableCell>
+                    <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
+                    <TableCell className="text-right">{row.signups_count}</TableCell>
+                    <TableCell className="text-right">{row.deposit_count}</TableCell>
+                    <TableCell className="text-right">{conv}%</TableCell>
+                    <TableCell className="text-right">฿{Number(row.first_deposit_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">฿{Number(row.total_deposit_amount).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">฿{Math.round(Number(row.ad_spend_usd) * THB_RATE).toLocaleString()}</TableCell>
+                    <TableCell className="text-right">฿{costHead.toLocaleString()}</TableCell>
+                    <TableCell>{row.website_name}</TableCell>
+                    <TableCell className="max-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                      {row.content_link ? (
+                        <a href={row.content_link} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">{row.content_link}</a>
+                      ) : "—"}
                     </TableCell>
-                  )}
-                </TableRow>
-              ))
+                    <TableCell className="max-w-[200px] text-xs" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
+                      {row.note || "—"}
+                    </TableCell>
+                    {(role === "manager" || role === "leader") && (
+                      <TableCell>
+                        {(role === "manager" || (role === "leader" && profile?.team_id && row.team_id === profile.team_id)) && (
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
+                            if (!confirm("ต้องการลบข้อมูลนี้?")) return;
+                            const { error } = await supabase.from("daily_stats").delete().eq("id", row.id);
+                            if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); }
+                            else { toast({ title: "ลบแล้ว" }); fetchHistory(); }
+                          }}>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        )}
+                      </TableCell>
+                    )}
+                  </TableRow>
+                );
+              })
             )}
           </TableBody>
+          {history.length > 0 && (
+            <TableFooter>
+              <TableRow className="border-border bg-muted/30 font-semibold">
+                <TableCell colSpan={2} className="text-xs uppercase text-muted-foreground">รวมทั้งหมด</TableCell>
+                <TableCell className="text-right">{sumSignups.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{sumDeposits.toLocaleString()}</TableCell>
+                <TableCell className="text-right">{sumSignups > 0 ? ((sumDeposits / sumSignups) * 100).toFixed(1) : "0.0"}%</TableCell>
+                <TableCell className="text-right">—</TableCell>
+                <TableCell className="text-right">—</TableCell>
+                <TableCell className="text-right">฿{Math.round(sumAdSpend * THB_RATE).toLocaleString()}</TableCell>
+                <TableCell className="text-right">฿{sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups).toLocaleString() : "0"}</TableCell>
+                <TableCell colSpan={4}></TableCell>
+              </TableRow>
+            </TableFooter>
+          )}
         </Table>
       </div>
     </div>

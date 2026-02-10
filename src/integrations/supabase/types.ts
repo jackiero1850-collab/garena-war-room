@@ -142,6 +142,7 @@ export type Database = {
           deposit_count: number
           first_deposit_amount: number
           id: string
+          note: string | null
           signups_count: number
           team_id: string | null
           team_member_id: string | null
@@ -158,6 +159,7 @@ export type Database = {
           deposit_count?: number
           first_deposit_amount?: number
           id?: string
+          note?: string | null
           signups_count?: number
           team_id?: string | null
           team_member_id?: string | null
@@ -174,6 +176,7 @@ export type Database = {
           deposit_count?: number
           first_deposit_amount?: number
           id?: string
+          note?: string | null
           signups_count?: number
           team_id?: string | null
           team_member_id?: string | null
