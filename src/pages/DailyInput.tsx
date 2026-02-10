@@ -270,7 +270,7 @@ const DailyInput = () => {
                     <TableCell>{row.website_name}</TableCell>
                     <TableCell className="max-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                       {row.content_link ? (
-                        <a href={row.content_link} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">{row.content_link}</a>
+                        <a href={row.content_link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline text-xs">{row.content_link}</a>
                       ) : "—"}
                     </TableCell>
                     <TableCell className="max-w-[200px] text-xs" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>

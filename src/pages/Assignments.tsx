@@ -9,15 +9,21 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User } from "lucide-react";
+import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User, FileBarChart } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
+import AssignmentReport from "@/components/assignments/AssignmentReport";
+
+interface ActionType {
+  id: string; name: string; color_hex: string;
+}
 
 interface Assignment {
   id: string; title: string; description: string | null; due_date: string;
   type: string; status: string; created_by: string | null; created_at: string;
   cover_image_url: string | null; website: string | null; assigned_to: string | null;
+  action_type_id: string | null;
 }
 
 interface Submission {
@@ -33,8 +39,10 @@ const Assignments = () => {
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [assignmentTypes, setAssignmentTypes] = useState<{ id: string; name: string }[]>([]);
+  const [actionTypes, setActionTypes] = useState<ActionType[]>([]);
   const [rosterMembers, setRosterMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [showReport, setShowReport] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -47,6 +55,7 @@ const Assignments = () => {
   const [newType, setNewType] = useState<string>("event");
   const [newWebsite, setNewWebsite] = useState<string>("none");
   const [newAssignedTo, setNewAssignedTo] = useState<string>("none");
+  const [newActionTypeId, setNewActionTypeId] = useState<string>("none");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>("");
 
@@ -55,7 +64,7 @@ const Assignments = () => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }, { data: smData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }, { data: smData }, { data: actData }] = await Promise.all([
       supabase.from("assignments").select("*").order("due_date", { ascending: true }),
       supabase.from("assignment_submissions").select("*"),
       supabase.from("profiles").select("id, username, email"),
@@ -63,6 +72,7 @@ const Assignments = () => {
       supabase.from("master_assignment_types").select("id, name").order("name"),
       supabase.from("team_members").select("id, name, nickname").order("name"),
       supabase.from("team_members").select("id, name, nickname, role").in("role", ["Sales", "Leader", "Head"]).order("name"),
+      supabase.from("task_action_types").select("*").order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);
@@ -71,6 +81,7 @@ const Assignments = () => {
     setProfiles(pMap);
     setWebsites((wData as any[]) || []);
     setAssignmentTypes((atData as any[]) || []);
+    setActionTypes((actData as ActionType[]) || []);
     setRosterMembers((rmData as any[]) || []);
     setSalesMembers((smData as any[]) || []);
   };
@@ -83,13 +94,13 @@ const Assignments = () => {
 
   const openCreate = () => {
     setEditingAssignment(null);
-    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setNewAssignedTo("none"); setCoverUrl("");
+    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setNewAssignedTo("none"); setNewActionTypeId("none"); setCoverUrl("");
     setShowCreate(true);
   };
 
   const openEdit = (a: Assignment) => {
     setEditingAssignment(a);
-    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setCoverUrl(a.cover_image_url || "");
+    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setNewActionTypeId(a.action_type_id || "none"); setCoverUrl(a.cover_image_url || "");
     setShowCreate(true);
   };
 
@@ -115,6 +126,7 @@ const Assignments = () => {
       title: newTitle.trim(), description: newDesc.trim() || null, due_date: newDueDate,
       type: newType, cover_image_url: coverUrl || null, website: newWebsite === "none" ? null : newWebsite,
       assigned_to: newAssignedTo === "none" ? null : newAssignedTo,
+      action_type_id: newActionTypeId === "none" ? null : newActionTypeId,
     };
     if (editingAssignment) {
       const { error } = await supabase.from("assignments").update(payload).eq("id", editingAssignment.id);
@@ -189,6 +201,9 @@ const Assignments = () => {
     ? submissions.filter(s => s.assignment_id === selectedAssignment.id)
     : [];
 
+  const actionTypeMap: Record<string, ActionType> = {};
+  actionTypes.forEach((at) => { actionTypeMap[at.id] = at; });
+
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarDays = eachDayOfInterval({ start: addDays(monthStart, -monthStart.getDay()), end: addDays(monthEnd, 6 - monthEnd.getDay()) });
@@ -203,15 +218,28 @@ const Assignments = () => {
     return diff >= 1 && diff <= 3;
   });
 
+  if (showReport) {
+    return (
+      <div className="p-6">
+        <AssignmentReport onBack={() => setShowReport(false)} />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl text-foreground">งานที่มอบหมาย</h1>
-        {role === "manager" && (
-          <Button onClick={openCreate} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
-            <Plus className="mr-2 h-4 w-4" /> สร้างงานใหม่
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowReport(true)} className="gap-2">
+            <FileBarChart className="h-4 w-4" /> รายงาน
           </Button>
-        )}
+          {role === "manager" && (
+            <Button onClick={openCreate} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
+              <Plus className="mr-2 h-4 w-4" /> สร้างงานใหม่
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Calendar */}
@@ -266,6 +294,9 @@ const Assignments = () => {
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-medium text-foreground truncate">{a.title}</p>
                     <Badge variant="outline" className="text-[10px] capitalize shrink-0">{a.type}</Badge>
+                    {a.action_type_id && actionTypeMap[a.action_type_id] && (
+                      <span className="inline-block h-2.5 w-2.5 rounded-full shrink-0" style={{ backgroundColor: actionTypeMap[a.action_type_id].color_hex }} title={actionTypeMap[a.action_type_id].name} />
+                    )}
                   </div>
                   <div className="flex items-center gap-2 mt-0.5">
                     {a.website && <span className="text-[10px] text-muted-foreground">{a.website}</span>}
@@ -465,6 +496,35 @@ const Assignments = () => {
                   {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">ผู้รับผิดชอบ</Label>
+                <Select value={newAssignedTo} onValueChange={setNewAssignedTo}>
+                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ทุกคน (All Team)</SelectItem>
+                    {salesMembers.map((m) => (<SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">Action</Label>
+                <Select value={newActionTypeId} onValueChange={setNewActionTypeId}>
+                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">ไม่มี</SelectItem>
+                    {actionTypes.map((at) => (
+                      <SelectItem key={at.id} value={at.id}>
+                        <span className="flex items-center gap-2">
+                          <span className="inline-block h-3 w-3 rounded-full shrink-0" style={{ backgroundColor: at.color_hex }} />
+                          {at.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ภาพปก</Label>
