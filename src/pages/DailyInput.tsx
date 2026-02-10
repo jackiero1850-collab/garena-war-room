@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { CalendarIcon, Plus, AlertCircle } from "lucide-react";
+import { CalendarIcon, Plus, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -89,7 +89,7 @@ const DailyInput = () => {
       first_deposit_amount: parseFloat(firstDep),
       total_deposit_amount: parseFloat(totalDep),
       ad_spend_usd: parseFloat(adSpend),
-      website_name: website as any,
+      website_name: website,
       content_link: contentLink.trim(),
     });
     setSubmitting(false);
@@ -218,12 +218,15 @@ const DailyInput = () => {
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากรวม</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">โฆษณา</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
+              {(role === "manager" || role === "leader") && (
+                <TableHead className="text-xs uppercase text-muted-foreground w-12"></TableHead>
+              )}
             </TableRow>
           </TableHeader>
           <TableBody>
             {history.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีข้อมูล</TableCell>
+                <TableCell colSpan={9} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีข้อมูล</TableCell>
               </TableRow>
             ) : (
               history.map((row: any) => (
@@ -236,6 +239,20 @@ const DailyInput = () => {
                   <TableCell className="text-right">฿{Number(row.total_deposit_amount).toLocaleString()}</TableCell>
                   <TableCell className="text-right">฿{Math.round(Number(row.ad_spend_usd) * 34).toLocaleString()}</TableCell>
                   <TableCell>{row.website_name}</TableCell>
+                  {(role === "manager" || role === "leader") && (
+                    <TableCell>
+                      {(role === "manager" || (role === "leader" && profile?.team_id && row.team_id === profile.team_id)) && (
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
+                          if (!confirm("ต้องการลบข้อมูลนี้?")) return;
+                          const { error } = await supabase.from("daily_stats").delete().eq("id", row.id);
+                          if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); }
+                          else { toast({ title: "ลบแล้ว" }); fetchHistory(); }
+                        }}>
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  )}
                 </TableRow>
               ))
             )}
