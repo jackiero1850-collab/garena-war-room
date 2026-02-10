@@ -139,6 +139,8 @@ const TeamPerformance = () => {
   const sumSignups = filtered.reduce((a, r) => a + Number(r.signups_count || 0), 0);
   const sumDeposits = filtered.reduce((a, r) => a + Number(r.deposit_count || 0), 0);
   const sumAdSpend = filtered.reduce((a, r) => a + Number(r.ad_spend_usd || 0), 0);
+  const sumFirstDep = filtered.reduce((a, r) => a + Number(r.first_deposit_amount || 0), 0);
+  const sumTotalDep = filtered.reduce((a, r) => a + Number(r.total_deposit_amount || 0), 0);
 
   return (
     <div className="space-y-4 p-6">
@@ -226,11 +228,11 @@ const TeamPerformance = () => {
                   <TableCell className="sticky left-[80px] bg-card font-medium text-sm">{r.team_members?.nickname || r.team_members?.name || "—"}</TableCell>
                   <TableCell className="text-right">{r.signups_count}</TableCell>
                   <TableCell className="text-right">{r.deposit_count}</TableCell>
-                  <TableCell className="text-right">{conv}%</TableCell>
+                  <TableCell className="text-right text-green-400">{conv}%</TableCell>
                   <TableCell className="text-right">฿{Number(r.first_deposit_amount).toLocaleString()}</TableCell>
                   <TableCell className="text-right">฿{Number(r.total_deposit_amount).toLocaleString()}</TableCell>
                   <TableCell className="text-right">฿{Math.round(Number(r.ad_spend_usd) * THB_RATE).toLocaleString()}</TableCell>
-                  <TableCell className="text-right">฿{costHead.toLocaleString()}</TableCell>
+                  <TableCell className="text-right text-green-400">฿{costHead.toLocaleString()}</TableCell>
                   <TableCell>{r.website_name}</TableCell>
                   <TableCell className="max-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                     {r.content_link ? (
@@ -259,11 +261,11 @@ const TeamPerformance = () => {
                 <TableCell colSpan={3} className="text-xs uppercase text-muted-foreground">รวมทั้งหมด</TableCell>
                 <TableCell className="text-right">{sumSignups.toLocaleString()}</TableCell>
                 <TableCell className="text-right">{sumDeposits.toLocaleString()}</TableCell>
-                <TableCell className="text-right">{sumSignups > 0 ? ((sumDeposits / sumSignups) * 100).toFixed(1) : "0.0"}%</TableCell>
-                <TableCell className="text-right">—</TableCell>
-                <TableCell className="text-right">—</TableCell>
+                <TableCell className="text-right text-green-400">{sumSignups > 0 ? ((sumDeposits / sumSignups) * 100).toFixed(1) : "0.0"}%</TableCell>
+                <TableCell className="text-right">฿{sumFirstDep.toLocaleString()}</TableCell>
+                <TableCell className="text-right">฿{sumTotalDep.toLocaleString()}</TableCell>
                 <TableCell className="text-right">฿{Math.round(sumAdSpend * THB_RATE).toLocaleString()}</TableCell>
-                <TableCell className="text-right">฿{sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups).toLocaleString() : "0"}</TableCell>
+                <TableCell className="text-right text-green-400">฿{sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups).toLocaleString() : "0"}</TableCell>
                 <TableCell colSpan={4}></TableCell>
               </TableRow>
             </TableFooter>
