@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { startOfMonth, format, endOfMonth, subDays } from "date-fns";
+import { startOfMonth, format, endOfMonth, subDays, isSameDay } from "date-fns";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -10,34 +10,51 @@ import DashboardFilters from "@/components/dashboard/DashboardFilters";
 import StatsChart from "@/components/dashboard/StatsChart";
 import LeaderboardTable from "@/components/dashboard/LeaderboardTable";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 
 const THB_RATE = 34;
 
 const Dashboard = () => {
-  const { role } = useAuth();
+  const { role, user } = useAuth();
   const today = new Date();
   const [date, setDate] = useState(today);
   const [teamId, setTeamId] = useState("all");
   const [userId, setUserId] = useState("all");
   const [stats, setStats] = useState<any[]>([]);
-  const [monthlyStats, setMonthlyStats] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
+  // Event popup state
+  const [eventPopup, setEventPopup] = useState<{ title: string; cover_image_url: string | null } | null>(null);
+  const [eventDismissed, setEventDismissed] = useState(false);
+
+  // Check for today's event assignments
+  useEffect(() => {
+    const checkTodayEvents = async () => {
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const { data } = await supabase
+        .from("assignments")
+        .select("title, cover_image_url")
+        .eq("due_date", todayStr)
+        .eq("type", "event")
+        .limit(1);
+      if (data && data.length > 0 && !eventDismissed) {
+        setEventPopup(data[0]);
+      }
+    };
+    checkTodayEvents();
+  }, []);
+
   const fetchData = useCallback(async () => {
     const monthStart = format(startOfMonth(date), "yyyy-MM-dd");
-    const monthEnd = format(endOfMonth(date), "yyyy-MM-dd");
     const selectedDate = format(date, "yyyy-MM-dd");
 
-    // Monthly stats (main KPI source: first of month → today)
-    // When filtering by team, join through team_members to match their team_id
     let mQuery = teamId !== "all"
       ? supabase.from("daily_stats").select("*, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("*, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
     if (userId !== "all") mQuery = mQuery.eq("team_member_id", userId);
     const { data: mData } = await mQuery;
     setStats(mData || []);
-    setMonthlyStats(mData || []);
 
     // Chart data: last 30 days
     const chartStart = format(subDays(date, 29), "yyyy-MM-dd");
@@ -56,10 +73,10 @@ const Dashboard = () => {
     setChartData(
       Object.entries(byDate)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([d, v]) => ({ date: format(new Date(d), "MMM dd"), ...v }))
+        .map(([d, v]) => ({ date: format(new Date(d), "dd-MM"), ...v }))
     );
 
-    // Leaderboard for the whole month range
+    // Leaderboard
     let lQuery = teamId !== "all"
       ? supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("team_member_id, signups_count, deposit_count, ad_spend_usd, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
@@ -135,6 +152,22 @@ const Dashboard = () => {
 
   return (
     <div className="space-y-6 p-6">
+      {/* Event Popup */}
+      <Dialog open={!!eventPopup && !eventDismissed} onOpenChange={() => { setEventDismissed(true); setEventPopup(null); }}>
+        <DialogContent className="border-border bg-card max-w-lg">
+          <DialogHeader><DialogTitle className="font-display text-xl uppercase tracking-wider text-primary">📢 อีเว้นท์วันนี้!</DialogTitle></DialogHeader>
+          <div className="space-y-4">
+            {eventPopup?.cover_image_url && (
+              <img src={eventPopup.cover_image_url} alt="Event" className="w-full rounded border border-border object-cover max-h-64" />
+            )}
+            <h2 className="text-lg font-bold text-foreground">{eventPopup?.title}</h2>
+            <Button onClick={() => { setEventDismissed(true); setEventPopup(null); }} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
+              รับทราบ
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <div className="flex items-center justify-between">
         <h1 className="font-display text-2xl text-foreground">แดชบอร์ด</h1>
         <div className="flex items-center gap-3">

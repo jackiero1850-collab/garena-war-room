@@ -41,7 +41,7 @@ const DashboardFilters = ({
         <PopoverTrigger asChild>
           <Button variant="outline" className="w-[180px] justify-start border-border bg-card text-foreground">
             <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-            {format(date, "dd MMM yyyy")}
+            {format(date, "dd-MM-yyyy")}
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">

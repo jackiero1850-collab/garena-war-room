@@ -49,7 +49,6 @@ const DailyInput = () => {
       .select("*, team_members(name, nickname)")
       .order("date", { ascending: false })
       .limit(50);
-    // Non-managers only see their own entries
     if (role !== "manager") {
       query = query.eq("user_id", user.id);
     }
@@ -59,7 +58,6 @@ const DailyInput = () => {
 
   useEffect(() => { fetchHistory(); }, [user, role]);
 
-  // Auto-fetch team_id when selecting a salesperson
   const selectedMember = salesMembers.find((m) => m.id === teamMemberId);
   const autoTeamId = selectedMember?.team_id || null;
 
@@ -120,7 +118,7 @@ const DailyInput = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start border-border bg-muted/50">
                   <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                  {format(date, "dd MMM yyyy")}
+                  {format(date, "dd-MM-yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -230,7 +228,7 @@ const DailyInput = () => {
             ) : (
               history.map((row: any) => (
                 <TableRow key={row.id} className="border-border">
-                  <TableCell>{format(new Date(row.date), "dd MMM")}</TableCell>
+                  <TableCell>{format(new Date(row.date), "dd-MM-yyyy")}</TableCell>
                   <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
                   <TableCell className="text-right">{row.signups_count}</TableCell>
                   <TableCell className="text-right">{row.deposit_count}</TableCell>
