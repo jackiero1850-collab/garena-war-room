@@ -57,7 +57,10 @@ const SystemSettings = () => {
     setActionTypes((actData as ActionTypeItem[]) || []);
     setActivityLogs((logData as ActivityLog[]) || []);
     const pMap: Record<string, string> = {};
-    (pData || []).forEach((p: any) => { pMap[p.id] = p.username || p.email; });
+    (pData || []).forEach((p: any) => {
+      const name = p.username || p.email;
+      pMap[p.id] = p.username ? `${p.username} (${p.email})` : p.email;
+    });
     setProfiles(pMap);
     const sMap: Record<string, string> = {};
     (sData || []).forEach((r: any) => { sMap[r.key] = r.value; });

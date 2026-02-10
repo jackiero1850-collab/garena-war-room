@@ -9,7 +9,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User, FileBarChart, Copy, Download } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar } from "@/components/ui/calendar";
+import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User, FileBarChart, Copy, Download, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
@@ -287,7 +289,7 @@ const Assignments = () => {
           <Button variant="outline" onClick={() => setShowReport(true)} className="gap-2">
             <FileBarChart className="h-4 w-4" /> รายงาน
           </Button>
-          {role === "manager" && (
+          {(role === "manager" || role === "leader") && (
             <Button onClick={openCreate} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
               <Plus className="mr-2 h-4 w-4" /> สร้างงานใหม่
             </Button>
@@ -489,7 +491,7 @@ const Assignments = () => {
                     <CheckCircle2 className="h-4 w-4" /><span className="text-sm font-medium">คุณส่งแล้ว</span>
                   </div>
                 )}
-                {role === "manager" && (
+                {(role === "manager" || role === "leader") && (
                   <>
                     <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openEdit(a); }} title="แก้ไข"><Pencil className="h-4 w-4" /></Button>
                     <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openDuplicate(a); }} title="ทำซ้ำ"><Copy className="h-4 w-4" /></Button>
@@ -572,7 +574,17 @@ const Assignments = () => {
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">กำหนดส่ง</Label>
-                <Input type="date" value={newDueDate} onChange={(e) => setNewDueDate(e.target.value)} className="border-border bg-muted/50" />
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start border-border bg-muted/50">
+                      <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
+                      {formatDateDD(newDueDate)}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0" align="start">
+                    <Calendar mode="single" selected={new Date(newDueDate)} onSelect={(d) => d && setNewDueDate(format(d, "yyyy-MM-dd"))} initialFocus className="p-3 pointer-events-auto" />
+                  </PopoverContent>
+                </Popover>
               </div>
               <div className="space-y-2">
                 <Label className="text-xs uppercase tracking-wider text-muted-foreground">ประเภท</Label>
