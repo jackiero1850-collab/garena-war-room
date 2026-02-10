@@ -47,7 +47,7 @@ const GraphicBriefs = () => {
       supabase.from("profiles").select("id, username, email"),
       supabase.from("team_members").select("id, name, nickname, role").eq("role", "Graphic").order("name"),
       supabase.from("master_brief_types").select("id, name").order("name"),
-      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role").in("role", ["Sales", "Leader", "Head"]).order("name"),
     ]);
     setBriefs((bData as Brief[]) || []);
     const pMap: Record<string, string> = {};

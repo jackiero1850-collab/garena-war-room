@@ -62,7 +62,7 @@ const Assignments = () => {
       supabase.from("websites").select("id, name").order("name"),
       supabase.from("master_assignment_types").select("id, name").order("name"),
       supabase.from("team_members").select("id, name, nickname").order("name"),
-      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role").in("role", ["Sales", "Leader", "Head"]).order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);

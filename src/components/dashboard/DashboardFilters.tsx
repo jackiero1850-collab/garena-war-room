@@ -26,7 +26,7 @@ const DashboardFilters = ({
   useEffect(() => {
     Promise.all([
       supabase.from("teams").select("id, name"),
-      supabase.from("team_members").select("id, name, nickname, team_id, role").eq("role", "Sales").order("name"),
+      supabase.from("team_members").select("id, name, nickname, team_id, role").in("role", ["Sales", "Leader", "Head"]).order("name"),
     ]).then(([{ data: tData }, { data: mData }]) => {
       setTeams((tData as any[]) || []);
       setMembers((mData as any[]) || []);
