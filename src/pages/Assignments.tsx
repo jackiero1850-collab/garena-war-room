@@ -184,9 +184,10 @@ const Assignments = () => {
       s.submitted_by_member_id && salesMemberMap[s.submitted_by_member_id] ? salesMemberMap[s.submitted_by_member_id] : profiles[s.user_id] || "ไม่ทราบ"
     );
 
-  const isDuplicate = selectedAssignment && submitById
-    ? submissions.some(s => s.assignment_id === selectedAssignment.id && s.submitted_by_member_id === submitById)
-    : false;
+  // Get submission history for the selected assignment
+  const assignmentSubmissions = selectedAssignment
+    ? submissions.filter(s => s.assignment_id === selectedAssignment.id)
+    : [];
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -388,9 +389,6 @@ const Assignments = () => {
                   ))}
                 </SelectContent>
               </Select>
-              {isDuplicate && (
-                <p className="text-sm text-destructive font-medium">คนนี้ส่งงานแล้ว</p>
-              )}
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">อัปโหลดรูปภาพ</Label>
@@ -405,7 +403,25 @@ const Assignments = () => {
                 </div>
               )}
             </div>
-            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0 || !submitById || isDuplicate} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
+            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0 || !submitById} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
+
+            {/* Submission History */}
+            {assignmentSubmissions.length > 0 && (
+              <div className="space-y-2 border-t border-border pt-3">
+                <p className="text-xs uppercase tracking-wider text-muted-foreground">ประวัติการส่ง</p>
+                <div className="space-y-1 max-h-32 overflow-y-auto">
+                  {assignmentSubmissions.map((s) => (
+                    <div key={s.id} className="flex items-center gap-2 text-xs text-muted-foreground">
+                      <CheckCircle2 className="h-3 w-3 text-[hsl(var(--warroom-success))] shrink-0" />
+                      <span className="font-medium text-foreground">
+                        {s.submitted_by_member_id && salesMemberMap[s.submitted_by_member_id] ? salesMemberMap[s.submitted_by_member_id] : profiles[s.user_id] || "ไม่ทราบ"}
+                      </span>
+                      <span>- {format(new Date(s.submitted_at), "dd-MM-yyyy HH:mm")}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </DialogContent>
       </Dialog>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,8 +14,21 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [appName, setAppName] = useState("WAR ROOM");
+  const [appLogoUrl, setAppLogoUrl] = useState("");
   const { signIn } = useAuth();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    supabase.from("app_settings").select("key, value").then(({ data }) => {
+      if (data) {
+        const map: Record<string, string> = {};
+        data.forEach((r: any) => { map[r.key] = r.value; });
+        if (map["app_name"]) setAppName(map["app_name"]);
+        if (map["app_logo_url"]) setAppLogoUrl(map["app_logo_url"]);
+      }
+    });
+  }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -51,11 +64,15 @@ const Login = () => {
       <div className="w-full max-w-md space-y-8 p-8">
         {/* Logo */}
         <div className="text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded border border-primary/50 bg-primary/10 glow-red">
-            <Crosshair className="h-8 w-8 text-primary" />
-          </div>
+          {appLogoUrl ? (
+            <img src={appLogoUrl} alt={appName} className="mx-auto h-16 w-16 rounded border border-primary/50 object-cover glow-red" />
+          ) : (
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded border border-primary/50 bg-primary/10 glow-red">
+              <Crosshair className="h-8 w-8 text-primary" />
+            </div>
+          )}
           <h1 className="mt-4 font-display text-3xl tracking-wider text-foreground">
-            WAR ROOM
+            {appName}
           </h1>
           <p className="mt-1 text-sm text-muted-foreground">
             Marketing Operations Platform
