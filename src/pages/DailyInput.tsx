@@ -32,7 +32,7 @@ const DailyInput = () => {
 
   useEffect(() => {
     Promise.all([
-      supabase.from("team_members").select("id, name, nickname, role, team_id").eq("role", "Sales").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role, team_id").in("role", ["Sales", "Leader", "Head"]).order("name"),
       supabase.from("websites").select("id, name").order("name"),
     ]).then(([{ data: mData }, { data: wData }]) => {
       setSalesMembers((mData as any[]) || []);
