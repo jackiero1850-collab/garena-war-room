@@ -12,6 +12,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Table, TableBody, TableCell, TableFooter, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { CalendarIcon, Plus, AlertCircle, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { getConvColor, getCostHeadColor, CONV_TOOLTIP, COST_HEAD_TOOLTIP } from "@/lib/metricColors";
 import { toast } from "@/hooks/use-toast";
 
 const THB_RATE = 34;
@@ -231,11 +232,11 @@ const DailyInput = () => {
               <TableHead className="text-xs uppercase text-muted-foreground">เซลส์</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">สมัคร</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝาก</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">% Conv</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground" title={CONV_TOOLTIP}>% Conv</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากแรก</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">ฝากรวม</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">โฆษณา</TableHead>
-              <TableHead className="text-right text-xs uppercase text-muted-foreground">ต้นทุน/หัว</TableHead>
+              <TableHead className="text-right text-xs uppercase text-muted-foreground" title={COST_HEAD_TOOLTIP}>ต้นทุน/หัว</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">ลิงก์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">หมายเหตุ</TableHead>
@@ -261,11 +262,11 @@ const DailyInput = () => {
                     <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
                     <TableCell className="text-right">{row.signups_count}</TableCell>
                     <TableCell className="text-right">{row.deposit_count}</TableCell>
-                    <TableCell className="text-right text-green-400">{conv}%</TableCell>
+                    <TableCell className={cn("text-right", getConvColor(parseFloat(conv)))}>{conv}%</TableCell>
                     <TableCell className="text-right">฿{Number(row.first_deposit_amount).toLocaleString()}</TableCell>
                     <TableCell className="text-right">฿{Number(row.total_deposit_amount).toLocaleString()}</TableCell>
                     <TableCell className="text-right">฿{Math.round(Number(row.ad_spend_usd) * THB_RATE).toLocaleString()}</TableCell>
-                    <TableCell className="text-right text-green-400">฿{costHead.toLocaleString()}</TableCell>
+                    <TableCell className={cn("text-right", getCostHeadColor(costHead))}>฿{costHead.toLocaleString()}</TableCell>
                     <TableCell>{row.website_name}</TableCell>
                     <TableCell className="max-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                       {row.content_link ? (
@@ -300,11 +301,11 @@ const DailyInput = () => {
                 <TableCell colSpan={2} className="text-xs uppercase text-muted-foreground">รวมทั้งหมด</TableCell>
                 <TableCell className="text-right">{sumSignups.toLocaleString()}</TableCell>
                 <TableCell className="text-right">{sumDeposits.toLocaleString()}</TableCell>
-                <TableCell className="text-right text-green-400">{sumSignups > 0 ? ((sumDeposits / sumSignups) * 100).toFixed(1) : "0.0"}%</TableCell>
+                <TableCell className={cn("text-right", getConvColor(sumSignups > 0 ? (sumDeposits / sumSignups) * 100 : 0))}>{sumSignups > 0 ? ((sumDeposits / sumSignups) * 100).toFixed(1) : "0.0"}%</TableCell>
                 <TableCell className="text-right">฿{sumFirstDep.toLocaleString()}</TableCell>
                 <TableCell className="text-right">฿{sumTotalDep.toLocaleString()}</TableCell>
                 <TableCell className="text-right">฿{Math.round(sumAdSpend * THB_RATE).toLocaleString()}</TableCell>
-                <TableCell className="text-right text-green-400">฿{sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups).toLocaleString() : "0"}</TableCell>
+                <TableCell className={cn("text-right", getCostHeadColor(sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups) : 0))}>฿{sumSignups > 0 ? Math.round((sumAdSpend * THB_RATE) / sumSignups).toLocaleString() : "0"}</TableCell>
                 <TableCell colSpan={4}></TableCell>
               </TableRow>
             </TableFooter>

@@ -5,6 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import {
   Users, TrendingUp, DollarSign, BarChart3, Percent, Target, CreditCard, CalendarDays, Wallet, Download,
 } from "lucide-react";
+import { getConvColor, getCostHeadColor } from "@/lib/metricColors";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import KpiCard from "@/components/dashboard/KpiCard";
 import DashboardFilters from "@/components/dashboard/DashboardFilters";
@@ -223,13 +224,13 @@ const Dashboard = () => {
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard title="ยอดสมัคร" value={totalSignups} icon={Users} highlight />
         <KpiCard title="ยอดฝาก" value={totalDepositors} icon={TrendingUp} />
-        <KpiCard title="% คอนเวอร์ชั่น" value={`${conversion.toFixed(1)}%`} icon={Percent} />
+        <KpiCard title="% คอนเวอร์ชั่น" value={`${conversion.toFixed(1)}%`} icon={Percent} valueClassName={getConvColor(conversion)} />
         <KpiCard title="ฝากครั้งแรก" value={`฿${firstDeposit.toLocaleString()}`} icon={DollarSign} />
       </div>
       <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <KpiCard title="ยอดฝากรวม" value={`฿${totalDeposit.toLocaleString()}`} icon={DollarSign} highlight />
         <KpiCard title="ค่าโฆษณา (THB)" value={`฿${adSpendThb.toLocaleString()}`} icon={CreditCard} />
-        <KpiCard title="ต้นทุน/หัว (THB)" value={`฿${costPerHead.toLocaleString()}`} icon={Target} />
+        <KpiCard title="ต้นทุน/หัว (THB)" value={`฿${costPerHead.toLocaleString()}`} icon={Target} valueClassName={getCostHeadColor(costPerHead)} />
         <KpiCard title="สมัครเดือนนี้" value={totalSignups} icon={CalendarDays} />
       </div>
 
