@@ -237,7 +237,7 @@ const TeamPerformance = () => {
                   <TableCell>{r.website_name}</TableCell>
                   <TableCell className="max-w-[200px]" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                     {r.content_link ? (
-                      <a href={r.content_link} target="_blank" rel="noopener noreferrer" className="text-primary underline text-xs">{r.content_link}</a>
+                      <a href={r.content_link} target="_blank" rel="noopener noreferrer" className="text-blue-500 underline text-xs">{r.content_link}</a>
                     ) : "—"}
                   </TableCell>
                   <TableCell className="max-w-[200px] text-xs" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>

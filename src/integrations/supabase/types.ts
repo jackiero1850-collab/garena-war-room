@@ -82,6 +82,7 @@ export type Database = {
       }
       assignments: {
         Row: {
+          action_type_id: string | null
           assigned_to: string | null
           cover_image_url: string | null
           created_at: string
@@ -96,6 +97,7 @@ export type Database = {
           website: string | null
         }
         Insert: {
+          action_type_id?: string | null
           assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -110,6 +112,7 @@ export type Database = {
           website?: string | null
         }
         Update: {
+          action_type_id?: string | null
           assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -124,6 +127,13 @@ export type Database = {
           website?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "assignments_action_type_id_fkey"
+            columns: ["action_type_id"]
+            isOneToOne: false
+            referencedRelation: "task_action_types"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "assignments_assigned_to_fkey"
             columns: ["assigned_to"]
@@ -368,6 +378,27 @@ export type Database = {
           title?: string
           updated_at?: string
           url?: string
+        }
+        Relationships: []
+      }
+      task_action_types: {
+        Row: {
+          color_hex: string
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          color_hex?: string
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          color_hex?: string
+          created_at?: string
+          id?: string
+          name?: string
         }
         Relationships: []
       }
