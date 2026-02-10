@@ -10,14 +10,13 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { UserPlus, Pencil, Trash2, Search, Shield } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 
-// Will be fetched from master_roles table
-
 interface TeamMember {
   id: string;
   name: string;
   nickname: string | null;
   role: string;
   team_id: string | null;
+  email: string | null;
   teamName?: string;
 }
 
@@ -34,6 +33,7 @@ const TeamRoster = () => {
 
   const [formName, setFormName] = useState("");
   const [formNickname, setFormNickname] = useState("");
+  const [formEmail, setFormEmail] = useState("");
   const [formRole, setFormRole] = useState("Sales");
   const [formCustomRole, setFormCustomRole] = useState("");
   const [useCustomRole, setUseCustomRole] = useState(false);
@@ -72,7 +72,7 @@ const TeamRoster = () => {
 
   const openCreate = () => {
     setEditMember(null);
-    setFormName(""); setFormNickname(""); setFormRole("Sales"); setFormCustomRole(""); setUseCustomRole(false); setFormTeamId("none");
+    setFormName(""); setFormNickname(""); setFormEmail(""); setFormRole("Sales"); setFormCustomRole(""); setUseCustomRole(false); setFormTeamId("none");
     setDialogOpen(true);
   };
 
@@ -80,6 +80,7 @@ const TeamRoster = () => {
     setEditMember(m);
     setFormName(m.name);
     setFormNickname(m.nickname || "");
+    setFormEmail(m.email || "");
     const isKnown = allRoles.includes(m.role);
     setFormRole(isKnown ? m.role : "__custom__");
     setFormCustomRole(isKnown ? "" : m.role);
@@ -101,6 +102,7 @@ const TeamRoster = () => {
     const payload = {
       name: formName.trim(),
       nickname: formNickname.trim() || null,
+      email: formEmail.trim() || null,
       role: finalRole,
       team_id: formTeamId === "none" ? null : formTeamId,
     };
@@ -132,7 +134,7 @@ const TeamRoster = () => {
   return (
     <div className="space-y-6 p-6">
       <div className="flex items-center justify-between">
-        <h1 className="font-display text-2xl text-foreground">ทีมรอสเตอร์</h1>
+        <h1 className="font-display text-2xl text-foreground">รายชื่อพนักงาน</h1>
         <Button onClick={openCreate} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
           <UserPlus className="mr-2 h-4 w-4" /> เพิ่มสมาชิก
         </Button>
@@ -149,6 +151,7 @@ const TeamRoster = () => {
             <TableRow className="border-border hover:bg-transparent">
               <TableHead className="text-xs uppercase text-muted-foreground">ชื่อ</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">ชื่อเล่น</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">อีเมล</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">ตำแหน่ง</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">ทีม</TableHead>
               <TableHead className="text-right text-xs uppercase text-muted-foreground">จัดการ</TableHead>
@@ -156,7 +159,7 @@ const TeamRoster = () => {
           </TableHeader>
           <TableBody>
             {filtered.length === 0 ? (
-              <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีสมาชิก เพิ่มสมาชิกคนแรก</TableCell></TableRow>
+              <TableRow><TableCell colSpan={6} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีสมาชิก เพิ่มสมาชิกคนแรก</TableCell></TableRow>
             ) : (
               filtered.map((m) => (
                 <TableRow key={m.id} className="border-border">
@@ -169,6 +172,7 @@ const TeamRoster = () => {
                     </div>
                   </TableCell>
                   <TableCell>{m.nickname || "—"}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{m.email || "—"}</TableCell>
                   <TableCell>
                     <span className="rounded bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary">{m.role}</span>
                   </TableCell>
@@ -192,13 +196,19 @@ const TeamRoster = () => {
             <DialogTitle className="font-display uppercase tracking-wider">{editMember ? "แก้ไขสมาชิก" : "เพิ่มสมาชิก"}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อ</Label>
-              <Input value={formName} onChange={(e) => setFormName(e.target.value)} className="border-border bg-muted/50" placeholder="ชื่อจริง" />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อ</Label>
+                <Input value={formName} onChange={(e) => setFormName(e.target.value)} className="border-border bg-muted/50" placeholder="ชื่อจริง" />
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อเล่น</Label>
+                <Input value={formNickname} onChange={(e) => setFormNickname(e.target.value)} className="border-border bg-muted/50" placeholder="ไม่บังคับ" />
+              </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อเล่น</Label>
-              <Input value={formNickname} onChange={(e) => setFormNickname(e.target.value)} className="border-border bg-muted/50" placeholder="ไม่บังคับ" />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">อีเมล (สำหรับเชื่อมบัญชี)</Label>
+              <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} className="border-border bg-muted/50" placeholder="user@example.com" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">

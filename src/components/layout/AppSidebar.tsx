@@ -15,7 +15,7 @@ const navItems = [
   { label: "งานที่มอบหมาย", icon: ClipboardList, path: "/assignments", enabled: true },
   { label: "บรีฟกราฟิก", icon: Palette, path: "/briefs", enabled: true },
   { label: "แหล่งข้อมูล", icon: FolderOpen, path: "/resources", enabled: true },
-  { label: "ผลงานทีม", icon: BarChart3, path: "/team-performance", enabled: true, leaderUp: true },
+  { label: "ผลงานทีม", icon: BarChart3, path: "/team-performance", enabled: true },
   { label: "ตั้งค่าโปรไฟล์", icon: Settings, path: "/settings", enabled: true },
   { label: "จัดการผู้ใช้", icon: Users, path: "/users", enabled: true, managerOnly: true },
   { label: "รายชื่อพนักงาน", icon: UsersRound, path: "/roster", enabled: true, managerOnly: true },
@@ -44,7 +44,6 @@ const AppSidebar = () => {
       <nav className="flex-1 space-y-1 overflow-y-auto px-2 py-3">
         {navItems.map((item) => {
           if (item.managerOnly && role !== "manager") return null;
-          if ((item as any).leaderUp && role !== "manager" && role !== "leader") return null;
           const isActive = location.pathname === item.path;
           return (
             <button

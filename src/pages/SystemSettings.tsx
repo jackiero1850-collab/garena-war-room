@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Shield, Globe, Users, Tag, Layers, FileType, Settings2, Upload } from "lucide-react";
+import { Plus, Pencil, Trash2, Shield, Globe, Users, Tag, Layers, FileType, Settings2, Upload, AlertTriangle } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
 
@@ -28,6 +28,9 @@ const SystemSettings = () => {
   const [dialogType, setDialogType] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [formName, setFormName] = useState("");
+
+  const [truncating, setTruncating] = useState(false);
+  const [confirmTruncate, setConfirmTruncate] = useState(false);
 
   const fetchData = async () => {
     const [{ data: wData }, { data: tData }, { data: rData }, { data: atData }, { data: btData }, { data: sData }] = await Promise.all([
@@ -122,6 +125,22 @@ const SystemSettings = () => {
     setLogoUploading(false);
   };
 
+  const handleTruncateData = async () => {
+    setTruncating(true);
+    try {
+      // Delete in order: submissions first, then stats/briefs/assignments
+      await supabase.from("assignment_submissions").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("daily_stats").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("graphic_briefs").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      await supabase.from("assignments").delete().neq("id", "00000000-0000-0000-0000-000000000000");
+      toast({ title: "ล้างข้อมูลสำเร็จ", description: "ลบข้อมูล daily_stats, assignments, graphic_briefs แล้ว" });
+    } catch (err: any) {
+      toast({ title: "ผิดพลาด", description: err.message, variant: "destructive" });
+    }
+    setTruncating(false);
+    setConfirmTruncate(false);
+  };
+
   const renderTable = (type: string, items: NamedItem[]) => (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -172,6 +191,7 @@ const SystemSettings = () => {
           <TabsTrigger value="roles" className="gap-2"><Tag className="h-3.5 w-3.5" /> ตำแหน่ง</TabsTrigger>
           <TabsTrigger value="assignment_types" className="gap-2"><Layers className="h-3.5 w-3.5" /> ประเภทงาน</TabsTrigger>
           <TabsTrigger value="brief_types" className="gap-2"><FileType className="h-3.5 w-3.5" /> ประเภทบรีฟ</TabsTrigger>
+          <TabsTrigger value="danger" className="gap-2 text-destructive"><AlertTriangle className="h-3.5 w-3.5" /> อันตราย</TabsTrigger>
         </TabsList>
 
         <TabsContent value="app" className="space-y-4">
@@ -201,6 +221,32 @@ const SystemSettings = () => {
         <TabsContent value="roles">{renderTable("role", roles)}</TabsContent>
         <TabsContent value="assignment_types">{renderTable("assignment_type", assignmentTypes)}</TabsContent>
         <TabsContent value="brief_types">{renderTable("brief_type", briefTypes)}</TabsContent>
+
+        <TabsContent value="danger" className="space-y-4">
+          <div className="rounded border border-destructive/30 bg-destructive/5 p-6 space-y-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+              <div>
+                <h3 className="font-display text-sm uppercase tracking-wider text-destructive">ล้างข้อมูลทั้งหมด</h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  ลบข้อมูล daily_stats, assignments, assignment_submissions, graphic_briefs ทั้งหมด เพื่อเริ่มต้นใหม่ การกระทำนี้ไม่สามารถย้อนกลับได้
+                </p>
+              </div>
+            </div>
+            {!confirmTruncate ? (
+              <Button variant="outline" className="border-destructive text-destructive hover:bg-destructive/10" onClick={() => setConfirmTruncate(true)}>
+                <Trash2 className="mr-2 h-4 w-4" /> ล้างข้อมูล
+              </Button>
+            ) : (
+              <div className="flex items-center gap-3">
+                <Button variant="destructive" onClick={handleTruncateData} disabled={truncating}>
+                  {truncating ? "กำลังลบ..." : "ยืนยันล้างข้อมูล"}
+                </Button>
+                <Button variant="ghost" onClick={() => setConfirmTruncate(false)}>ยกเลิก</Button>
+              </div>
+            )}
+          </div>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={!!dialogType && dialogType !== "app"} onOpenChange={() => setDialogType(null)}>

@@ -323,7 +323,7 @@ const Assignments = () => {
                   <Badge variant="outline" className="text-primary border-primary/30"><User className="mr-1 h-3 w-3" />{rosterMap[selectedAssignment.assigned_to]}</Badge>
                 )}
                 {getCountdownBadge(selectedAssignment.due_date)}
-                <span className="text-sm text-muted-foreground">กำหนด: {format(new Date(selectedAssignment.due_date), "dd MMM yyyy")}</span>
+                <span className="text-sm text-muted-foreground">กำหนด: {format(new Date(selectedAssignment.due_date), "dd-MM-yyyy")}</span>
               </div>
               {selectedAssignment.description && <p className="text-sm text-muted-foreground">{selectedAssignment.description}</p>}
               <div className="space-y-2 pt-2">

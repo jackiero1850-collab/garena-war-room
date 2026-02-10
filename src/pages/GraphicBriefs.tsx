@@ -24,13 +24,6 @@ interface Brief {
   created_at: string;
 }
 
-const STATUS_CONFIG: Record<string, { color: string; icon: any; label: string }> = {
-  queue: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
-  cutting: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
-  fix: { color: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: Clock, label: "รอดำเนินการ" },
-  done: { color: "bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] border-[hsl(var(--warroom-success))]/30", icon: CheckCircle2, label: "เสร็จแล้ว" },
-};
-
 const GraphicBriefs = () => {
   const { user, role } = useAuth();
   const [briefs, setBriefs] = useState<Brief[]>([]);
@@ -107,7 +100,7 @@ const GraphicBriefs = () => {
   const graphicMap: Record<string, string> = {};
   graphicMembers.forEach((g) => { graphicMap[g.id] = g.nickname || g.name; });
 
-  // Workload summary: count active briefs per designer
+  // Workload summary
   const workloadMap: Record<string, { name: string; total: number }> = {};
   graphicMembers.forEach((g) => {
     workloadMap[g.id] = { name: g.nickname || g.name, total: 0 };
@@ -117,6 +110,13 @@ const GraphicBriefs = () => {
       workloadMap[b.graphic_user_id].total++;
     }
   });
+
+  const formatDate = (d: string) => {
+    try { return format(new Date(d), "dd-MM-yyyy"); } catch { return d; }
+  };
+  const formatTime = (d: string) => {
+    try { return format(new Date(d), "HH:mm"); } catch { return ""; }
+  };
 
   return (
     <div className="space-y-6 p-6">
@@ -209,7 +209,11 @@ const GraphicBriefs = () => {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
                     <p className="text-xs text-muted-foreground">
-                      {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "ยังไม่มอบหมาย"} · {format(new Date(brief.created_at), "dd MMM")}
+                      <span className="text-primary">{profiles[brief.sales_user_id] || "—"}</span>
+                      {" → "}
+                      {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "ยังไม่มอบหมาย"}
+                      {" · "}
+                      {formatTime(brief.created_at)}
                     </p>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => markDone(brief.id)} className="shrink-0 text-xs text-[hsl(var(--warroom-success))]">
@@ -226,13 +230,17 @@ const GraphicBriefs = () => {
               <div className="space-y-2">
                 {doneBriefs.slice(0, 10).map((brief) => (
                   <div key={brief.id} className="flex items-center gap-3 rounded border border-border bg-card/50 p-3 opacity-60">
-                    <Badge variant="outline" className={STATUS_CONFIG.done.color}>
+                    <Badge variant="outline" className="shrink-0 bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] border-[hsl(var(--warroom-success))]/30">
                       <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จแล้ว
                     </Badge>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "—"} · {brief.completion_date ? format(new Date(brief.completion_date), "dd MMM") : "—"}
+                        <span className="text-primary">{profiles[brief.sales_user_id] || "—"}</span>
+                        {" → "}
+                        {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "—"}
+                        {" · "}
+                        {brief.completion_date ? formatDate(brief.completion_date) : "—"}
                       </p>
                     </div>
                   </div>

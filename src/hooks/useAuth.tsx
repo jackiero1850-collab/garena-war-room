@@ -30,9 +30,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from("profiles").select("*").eq("id", userId).maybeSingle(),
         supabase.from("user_roles").select("role").eq("user_id", userId).maybeSingle(),
       ]);
-      if (isMounted.current) {
-        setProfile(profileRes.data);
-        setRole(roleRes.data?.role ?? null);
+      if (!isMounted.current) return;
+      setProfile(profileRes.data);
+      setRole(roleRes.data?.role ?? null);
+
+      // Link user to team_members by email for team_id sync
+      if (profileRes.data?.email) {
+        const { data: rosterMatch } = await supabase
+          .from("team_members")
+          .select("id, team_id")
+          .eq("email", profileRes.data.email)
+          .maybeSingle();
+        if (rosterMatch && rosterMatch.team_id && profileRes.data.team_id !== rosterMatch.team_id) {
+          await supabase.from("profiles").update({ team_id: rosterMatch.team_id }).eq("id", userId);
+          if (isMounted.current) {
+            setProfile((prev) => prev ? { ...prev, team_id: rosterMatch.team_id } : prev);
+          }
+        }
       }
     } catch (err) {
       console.error("Failed to fetch profile/role:", err);
