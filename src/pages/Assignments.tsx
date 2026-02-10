@@ -33,6 +33,7 @@ const Assignments = () => {
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [assignmentTypes, setAssignmentTypes] = useState<{ id: string; name: string }[]>([]);
   const [rosterMembers, setRosterMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -48,18 +49,19 @@ const Assignments = () => {
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>("");
 
-  const [submitNotes, setSubmitNotes] = useState("");
+  const [submitById, setSubmitById] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }, { data: smData }] = await Promise.all([
       supabase.from("assignments").select("*").order("due_date", { ascending: true }),
       supabase.from("assignment_submissions").select("*"),
       supabase.from("profiles").select("id, username, email"),
       supabase.from("websites").select("id, name").order("name"),
       supabase.from("master_assignment_types").select("id, name").order("name"),
       supabase.from("team_members").select("id, name, nickname").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);
@@ -69,6 +71,7 @@ const Assignments = () => {
     setWebsites((wData as any[]) || []);
     setAssignmentTypes((atData as any[]) || []);
     setRosterMembers((rmData as any[]) || []);
+    setSalesMembers((smData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -152,14 +155,14 @@ const Assignments = () => {
   };
 
   const handleSubmitProof = async () => {
-    if (!selectedAssignment || !user) return;
+    if (!selectedAssignment || !user || !submitById) return;
     const { error } = await supabase.from("assignment_submissions").insert({
       assignment_id: selectedAssignment.id, user_id: user.id,
-      image_proof_urls: uploadedUrls, notes: submitNotes.trim() || null,
+      image_proof_urls: uploadedUrls, notes: submitById || null,
     } as any);
     if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
     toast({ title: "ส่งหลักฐานแล้ว!" });
-    setShowSubmit(false); setSubmitNotes(""); setUploadedUrls([]); fetchData();
+    setShowSubmit(false); setSubmitById(""); setUploadedUrls([]); fetchData();
   };
 
   const getCountdownBadge = (dueDate: string) => {
@@ -246,7 +249,7 @@ const Assignments = () => {
               <p className="px-4 py-6 text-center text-sm text-muted-foreground">ไม่มีภารกิจวันนี้</p>
             ) : todayMissions.map((a) => (
               <div key={a.id} className="flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/30 transition-colors"
-                onClick={() => { setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }}>
+                onClick={() => { setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitById(""); }}>
                 {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-10 w-10 rounded object-cover shrink-0 border border-border" />}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
@@ -263,7 +266,7 @@ const Assignments = () => {
                 {hasSubmitted(a.id) ? (
                   <Badge className="bg-[hsl(var(--warroom-success))]/20 text-[hsl(var(--warroom-success))] shrink-0"><CheckCircle2 className="mr-1 h-3 w-3" />ส่งแล้ว</Badge>
                 ) : (
-                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }}>
+                  <Button size="sm" className="bg-primary hover:bg-primary/90 shrink-0" onClick={(e) => { e.stopPropagation(); setSelectedAssignment(a); setShowSubmit(true); setUploadedUrls([]); setSubmitById(""); }}>
                     <Upload className="mr-1 h-3 w-3" /> ส่งงาน
                   </Button>
                 )}
@@ -338,7 +341,7 @@ const Assignments = () => {
               </div>
               <div className="flex gap-2 pt-2">
                 {!hasSubmitted(selectedAssignment.id) ? (
-                  <Button onClick={() => { setShowSubmit(true); setUploadedUrls([]); setSubmitNotes(""); }} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
+                  <Button onClick={() => { setShowSubmit(true); setUploadedUrls([]); setSubmitById(""); }} className="bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
                     <Upload className="mr-2 h-4 w-4" /> ส่งหลักฐาน
                   </Button>
                 ) : (
@@ -359,10 +362,23 @@ const Assignments = () => {
       )}
 
       {/* Submit Proof Dialog */}
-      <Dialog open={showSubmit} onOpenChange={(o) => { if (!o) { setShowSubmit(false); setUploadedUrls([]); setSubmitNotes(""); } }}>
+      <Dialog open={showSubmit} onOpenChange={(o) => { if (!o) { setShowSubmit(false); setUploadedUrls([]); setSubmitById(""); } }}>
         <DialogContent className="border-border bg-card">
           <DialogHeader><DialogTitle className="font-display uppercase tracking-wider">ส่งหลักฐาน</DialogTitle></DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อผู้ส่งงาน</Label>
+              <Select value={submitById} onValueChange={setSubmitById}>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกผู้ส่งงาน" /></SelectTrigger>
+                <SelectContent>
+                  {salesMembers.length === 0 ? (
+                    <SelectItem value="none" disabled>ไม่พบสมาชิก Sales</SelectItem>
+                  ) : salesMembers.map((m) => (
+                    <SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">อัปโหลดรูปภาพ</Label>
               <label className="flex cursor-pointer items-center justify-center gap-2 rounded border-2 border-dashed border-border p-6 hover:border-primary/50 transition-colors">
@@ -376,11 +392,7 @@ const Assignments = () => {
                 </div>
               )}
             </div>
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">หมายเหตุ</Label>
-              <Textarea value={submitNotes} onChange={(e) => setSubmitNotes(e.target.value)} className="border-border bg-muted/50" placeholder="หมายเหตุเพิ่มเติม..." />
-            </div>
-            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
+            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0 || !submitById} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -415,31 +427,15 @@ const Assignments = () => {
                 </Select>
               </div>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">เว็บไซต์</Label>
-                <Select value={newWebsite} onValueChange={setNewWebsite}>
-                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">ไม่มี</SelectItem>
-                    {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs uppercase tracking-wider text-muted-foreground">ผู้รับผิดชอบ</Label>
-                <Select value={newAssignedTo} onValueChange={setNewAssignedTo}>
-                  <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">ไม่ระบุ</SelectItem>
-                    {rosterMembers.length === 0 ? (
-                      <SelectItem value="empty" disabled>ไม่พบสมาชิก</SelectItem>
-                    ) : rosterMembers.map((m) => (
-                      <SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">เว็บไซต์</Label>
+              <Select value={newWebsite} onValueChange={setNewWebsite}>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">ไม่มี</SelectItem>
+                  {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ภาพปก</Label>

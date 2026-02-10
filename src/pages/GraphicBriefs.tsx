@@ -4,10 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Layers, CheckCircle2, Clock, User } from "lucide-react";
+import { Layers, CheckCircle2, Clock } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 
@@ -29,19 +29,22 @@ const GraphicBriefs = () => {
   const [briefs, setBriefs] = useState<Brief[]>([]);
   const [profiles, setProfiles] = useState<Record<string, string>>({});
   const [graphicMembers, setGraphicMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
   const [briefTypes, setBriefTypes] = useState<{ id: string; name: string }[]>([]);
 
   const [briefType, setBriefType] = useState("");
-  const [description, setDescription] = useState("");
   const [graphicMemberId, setGraphicMemberId] = useState("");
+  const [salesMemberId, setSalesMemberId] = useState("");
+  const [briefTime, setBriefTime] = useState(format(new Date(), "HH:mm"));
   const [submitting, setSubmitting] = useState(false);
 
   const fetchData = async () => {
-    const [{ data: bData }, { data: pData }, { data: gData }, { data: btData }] = await Promise.all([
+    const [{ data: bData }, { data: pData }, { data: gData }, { data: btData }, { data: smData }] = await Promise.all([
       supabase.from("graphic_briefs").select("*").order("created_at", { ascending: false }),
       supabase.from("profiles").select("id, username, email"),
       supabase.from("team_members").select("id, name, nickname, role").eq("role", "Graphic").order("name"),
       supabase.from("master_brief_types").select("id, name").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role").eq("role", "Sales").order("name"),
     ]);
     setBriefs((bData as Brief[]) || []);
     const pMap: Record<string, string> = {};
@@ -49,6 +52,7 @@ const GraphicBriefs = () => {
     setProfiles(pMap);
     setGraphicMembers((gData as any[]) || []);
     setBriefTypes((btData as any[]) || []);
+    setSalesMembers((smData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
@@ -61,22 +65,27 @@ const GraphicBriefs = () => {
     return () => { supabase.removeChannel(channel); };
   }, []);
 
+  // Sales member lookup
+  const salesMap: Record<string, string> = {};
+  salesMembers.forEach((s) => { salesMap[s.id] = s.nickname || s.name; });
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!user || !briefType.trim()) return;
+    if (!user || !briefType.trim() || !salesMemberId) return;
     setSubmitting(true);
     const { error } = await supabase.from("graphic_briefs").insert({
       sales_user_id: user.id,
       graphic_user_id: graphicMemberId || null,
       brief_type: briefType.trim(),
-      description: description.trim() || null,
+      description: salesMemberId,
+      request_time: briefTime,
     } as any);
     setSubmitting(false);
     if (error) {
       toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "ส่งบรีฟแล้ว" });
-      setDescription(""); setBriefType("");
+      setBriefType(""); setSalesMemberId(""); setBriefTime(format(new Date(), "HH:mm"));
       fetchData();
     }
   };
@@ -113,9 +122,6 @@ const GraphicBriefs = () => {
 
   const formatDate = (d: string) => {
     try { return format(new Date(d), "dd-MM-yyyy"); } catch { return d; }
-  };
-  const formatTime = (d: string) => {
-    try { return format(new Date(d), "HH:mm"); } catch { return ""; }
   };
 
   return (
@@ -181,11 +187,25 @@ const GraphicBriefs = () => {
             </div>
 
             <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">รายละเอียด</Label>
-              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} className="border-border bg-muted/50" placeholder="อธิบายบรีฟ..." rows={4} />
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อเซลล์คนบรีฟ</Label>
+              <Select value={salesMemberId} onValueChange={setSalesMemberId}>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกเซลล์" /></SelectTrigger>
+                <SelectContent>
+                  {salesMembers.length === 0 ? (
+                    <SelectItem value="none" disabled>ไม่พบสมาชิก Sales — เพิ่มในรายชื่อพนักงาน</SelectItem>
+                  ) : salesMembers.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>{s.nickname || s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
-            <Button type="submit" disabled={submitting || !briefType} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">เวลาบรีฟ</Label>
+              <Input type="time" value={briefTime} onChange={(e) => setBriefTime(e.target.value)} className="border-border bg-muted/50" />
+            </div>
+
+            <Button type="submit" disabled={submitting || !briefType || !salesMemberId} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
               <Layers className="mr-2 h-4 w-4" />
               {submitting ? "กำลังส่ง..." : "ส่งบรีฟ"}
             </Button>
@@ -209,11 +229,11 @@ const GraphicBriefs = () => {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
                     <p className="text-xs text-muted-foreground">
-                      <span className="text-primary">{profiles[brief.sales_user_id] || "—"}</span>
+                      <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
                       {" → "}
                       {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "ยังไม่มอบหมาย"}
                       {" · "}
-                      {formatTime(brief.created_at)}
+                      {brief.request_time || "—"}
                     </p>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => markDone(brief.id)} className="shrink-0 text-xs text-[hsl(var(--warroom-success))]">
@@ -236,7 +256,7 @@ const GraphicBriefs = () => {
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        <span className="text-primary">{profiles[brief.sales_user_id] || "—"}</span>
+                        <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
                         {" → "}
                         {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "—"}
                         {" · "}
