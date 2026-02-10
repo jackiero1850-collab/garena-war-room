@@ -7,9 +7,11 @@ import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Layers, CheckCircle2, Clock } from "lucide-react";
+import { Layers, CheckCircle2, Clock, CalendarIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Brief {
   id: string;
@@ -35,6 +37,7 @@ const GraphicBriefs = () => {
   const [briefType, setBriefType] = useState("");
   const [graphicMemberId, setGraphicMemberId] = useState("");
   const [salesMemberId, setSalesMemberId] = useState("");
+  const [briefDate, setBriefDate] = useState<Date>(new Date());
   const [briefTime, setBriefTime] = useState(format(new Date(), "HH:mm"));
   const [submitting, setSubmitting] = useState(false);
 
@@ -78,6 +81,7 @@ const GraphicBriefs = () => {
       graphic_user_id: graphicMemberId || null,
       brief_type: briefType.trim(),
       description: salesMemberId,
+      request_date: format(briefDate, "yyyy-MM-dd"),
       request_time: briefTime,
     } as any);
     setSubmitting(false);
@@ -85,7 +89,7 @@ const GraphicBriefs = () => {
       toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" });
     } else {
       toast({ title: "ส่งบรีฟแล้ว" });
-      setBriefType(""); setSalesMemberId(""); setBriefTime(format(new Date(), "HH:mm"));
+      setBriefType(""); setSalesMemberId(""); setBriefDate(new Date()); setBriefTime(format(new Date(), "HH:mm"));
       fetchData();
     }
   };
@@ -156,36 +160,7 @@ const GraphicBriefs = () => {
           <form onSubmit={handleSubmit} className="rounded border border-border bg-card p-5 space-y-4">
             <h3 className="font-display text-sm uppercase tracking-wider text-muted-foreground">คำขอใหม่</h3>
 
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ประเภท</Label>
-              <Select value={briefType} onValueChange={setBriefType}>
-                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกประเภท" /></SelectTrigger>
-                <SelectContent>
-                  {briefTypes.length === 0 ? (
-                    <SelectItem value="none" disabled>ไม่พบประเภท — เพิ่มในตั้งค่าระบบ</SelectItem>
-                  ) : briefTypes.map((t) => (
-                    <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label className="text-xs uppercase tracking-wider text-muted-foreground">กราฟิกดีไซเนอร์</Label>
-              <Select value={graphicMemberId} onValueChange={setGraphicMemberId}>
-                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกดีไซเนอร์" /></SelectTrigger>
-                <SelectContent>
-                  {graphicMembers.length === 0 ? (
-                    <SelectItem value="none" disabled>ไม่พบสมาชิกกราฟิก — เพิ่มในรายชื่อพนักงาน</SelectItem>
-                  ) : (
-                    graphicMembers.map((g) => (
-                      <SelectItem key={g.id} value={g.id}>{g.nickname || g.name}</SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
-            </div>
-
+            {/* 1. Sales Name */}
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อเซลล์คนบรีฟ</Label>
               <Select value={salesMemberId} onValueChange={setSalesMemberId}>
@@ -200,9 +175,58 @@ const GraphicBriefs = () => {
               </Select>
             </div>
 
+            {/* 2. Date */}
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">วันที่บรีฟ</Label>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" className={cn("w-full justify-start text-left font-normal border-border bg-muted/50", !briefDate && "text-muted-foreground")}>
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {briefDate ? format(briefDate, "dd-MM-yyyy") : "เลือกวันที่"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar mode="single" selected={briefDate} onSelect={(d) => d && setBriefDate(d)} initialFocus className={cn("p-3 pointer-events-auto")} />
+                </PopoverContent>
+              </Popover>
+            </div>
+
+            {/* 3. Time */}
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">เวลาบรีฟ</Label>
               <Input type="time" value={briefTime} onChange={(e) => setBriefTime(e.target.value)} className="border-border bg-muted/50" />
+            </div>
+
+            {/* 4. Type */}
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ประเภท</Label>
+              <Select value={briefType} onValueChange={setBriefType}>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกประเภท" /></SelectTrigger>
+                <SelectContent>
+                  {briefTypes.length === 0 ? (
+                    <SelectItem value="none" disabled>ไม่พบประเภท — เพิ่มในตั้งค่าระบบ</SelectItem>
+                  ) : briefTypes.map((t) => (
+                    <SelectItem key={t.id} value={t.name}>{t.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {/* 5. Graphic Designer */}
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">กราฟิกดีไซเนอร์</Label>
+              <Select value={graphicMemberId} onValueChange={setGraphicMemberId}>
+                <SelectTrigger className="border-border bg-muted/50"><SelectValue placeholder="เลือกดีไซเนอร์" /></SelectTrigger>
+                <SelectContent>
+                  {graphicMembers.length === 0 ? (
+                    <SelectItem value="none" disabled>ไม่พบสมาชิกกราฟิก — เพิ่มในรายชื่อพนักงาน</SelectItem>
+                  ) : (
+                    graphicMembers.map((g) => (
+                      <SelectItem key={g.id} value={g.id}>{g.nickname || g.name}</SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
             </div>
 
             <Button type="submit" disabled={submitting || !briefType || !salesMemberId} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90 glow-red-sm">
