@@ -131,7 +131,7 @@ const DailyInput = () => {
               <PopoverTrigger asChild>
                 <Button variant="outline" className="w-full justify-start border-border bg-muted/50">
                   <CalendarIcon className="mr-2 h-4 w-4 text-primary" />
-                  {format(date, "dd-MM-yyyy")}
+                  {format(date, "dd/MM/yyyy")}
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-auto p-0" align="start">
@@ -258,7 +258,7 @@ const DailyInput = () => {
                 const costHead = rowSignups > 0 ? Math.round((Number(row.ad_spend_usd) * THB_RATE) / rowSignups) : 0;
                 return (
                   <TableRow key={row.id} className="border-border">
-                    <TableCell>{format(new Date(row.date), "dd-MM-yyyy")}</TableCell>
+                    <TableCell>{format(new Date(row.date), "dd/MM/yyyy")}</TableCell>
                     <TableCell>{row.team_members?.nickname || row.team_members?.name || "—"}</TableCell>
                     <TableCell className="text-right">{row.signups_count}</TableCell>
                     <TableCell className="text-right">{row.deposit_count}</TableCell>

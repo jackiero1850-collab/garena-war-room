@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      activity_logs: {
+        Row: {
+          action: string
+          created_at: string
+          details: Json | null
+          id: string
+          target_id: string | null
+          target_table: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_table: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          target_id?: string | null
+          target_table?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       app_settings: {
         Row: {
           id: string
@@ -83,6 +113,7 @@ export type Database = {
       assignments: {
         Row: {
           action_type_id: string | null
+          asset_link: string | null
           assigned_to: string | null
           cover_image_url: string | null
           created_at: string
@@ -98,6 +129,7 @@ export type Database = {
         }
         Insert: {
           action_type_id?: string | null
+          asset_link?: string | null
           assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string
@@ -113,6 +145,7 @@ export type Database = {
         }
         Update: {
           action_type_id?: string | null
+          asset_link?: string | null
           assigned_to?: string | null
           cover_image_url?: string | null
           created_at?: string

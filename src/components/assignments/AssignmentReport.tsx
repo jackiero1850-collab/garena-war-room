@@ -140,6 +140,7 @@ const AssignmentReport = ({ onBack }: Props) => {
               <TableHead className="text-xs uppercase text-muted-foreground">ชื่องาน</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">Action</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">ผู้รับผิดชอบ</TableHead>
+              <TableHead className="text-xs uppercase text-muted-foreground">ผู้ส่งงาน</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">กำหนดส่ง</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">วันที่ส่ง</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground">สถานะ</TableHead>
@@ -148,10 +149,13 @@ const AssignmentReport = ({ onBack }: Props) => {
           </TableHeader>
           <TableBody>
             {rows.length === 0 ? (
-              <TableRow><TableCell colSpan={7} className="py-8 text-center text-sm text-muted-foreground">ไม่มีข้อมูล</TableCell></TableRow>
+              <TableRow><TableCell colSpan={8} className="py-8 text-center text-sm text-muted-foreground">ไม่มีข้อมูล</TableCell></TableRow>
             ) : rows.map((r) => {
               const at = r.assignment.action_type_id ? actionTypeMap[r.assignment.action_type_id] : null;
               const proofUrls = r.submission?.image_proof_urls || [];
+              const submittedByName = r.submission?.submitted_by_member_id
+                ? memberMap[r.submission.submitted_by_member_id] || "—"
+                : "—";
               return (
                 <TableRow key={r.assignment.id} className="border-border">
                   <TableCell className="font-medium text-sm">{r.assignment.title}</TableCell>
@@ -166,9 +170,10 @@ const AssignmentReport = ({ onBack }: Props) => {
                   <TableCell className="text-sm">
                     {r.assignment.assigned_to ? memberMap[r.assignment.assigned_to] || "—" : "ทุกคน"}
                   </TableCell>
-                  <TableCell className="text-sm">{format(new Date(r.assignment.due_date), "dd-MM-yyyy")}</TableCell>
+                  <TableCell className="text-sm">{submittedByName}</TableCell>
+                  <TableCell className="text-sm">{format(new Date(r.assignment.due_date), "dd/MM/yyyy")}</TableCell>
                   <TableCell className="text-sm">
-                    {r.submission ? format(new Date(r.submission.submitted_at), "dd-MM-yyyy HH:mm") : "—"}
+                    {r.submission ? format(new Date(r.submission.submitted_at), "dd/MM/yyyy HH:mm") : "—"}
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className={statusConfig[r.status].className + " text-xs"}>

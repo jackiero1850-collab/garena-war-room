@@ -101,7 +101,7 @@ const Dashboard = () => {
     setChartData(
       Object.entries(byDate)
         .sort(([a], [b]) => a.localeCompare(b))
-        .map(([d, v]) => ({ date: format(new Date(d), "dd-MM"), ...v }))
+        .map(([d, v]) => ({ date: format(new Date(d), "dd/MM"), ...v }))
     );
 
     // Leaderboard

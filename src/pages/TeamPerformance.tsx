@@ -225,7 +225,7 @@ const TeamPerformance = () => {
               return (
                 <TableRow key={r.id} className={cn("border-border", rank && rank <= 3 && "bg-primary/5")}>
                   <TableCell>{getRankBadge(mid)}</TableCell>
-                  <TableCell className="sticky left-0 bg-card text-sm">{format(new Date(r.date), "dd-MM-yyyy")}</TableCell>
+                  <TableCell className="sticky left-0 bg-card text-sm">{format(new Date(r.date), "dd/MM/yyyy")}</TableCell>
                   <TableCell className="sticky left-[80px] bg-card font-medium text-sm">{r.team_members?.nickname || r.team_members?.name || "—"}</TableCell>
                   <TableCell className="text-right">{r.signups_count}</TableCell>
                   <TableCell className="text-right">{r.deposit_count}</TableCell>
