@@ -26,6 +26,7 @@ const Dashboard = () => {
   const [stats, setStats] = useState<any[]>([]);
   const [chartData, setChartData] = useState<any[]>([]);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [globalStats, setGlobalStats] = useState<any>({ signups_count: 0, deposit_count: 0, first_deposit_amount: 0, total_deposit_amount: 0, ad_spend_usd: 0 });
 
   // Event popup state
   const [eventPopup, setEventPopup] = useState<{ id: string; title: string; cover_image_url: string | null } | null>(null);
@@ -64,6 +65,15 @@ const Dashboard = () => {
     const monthStart = format(startOfMonth(date), "yyyy-MM-dd");
     const selectedDate = format(date, "yyyy-MM-dd");
 
+    // Global KPI stats visible to ALL roles via security definer function
+    const { data: globalData } = await supabase.rpc("get_global_dashboard_stats", {
+      _start_date: monthStart,
+      _end_date: selectedDate,
+      _website: websiteFilter !== "all" ? websiteFilter : null,
+    });
+    setGlobalStats(globalData || { signups_count: 0, deposit_count: 0, first_deposit_amount: 0, total_deposit_amount: 0, ad_spend_usd: 0 });
+
+    // Filtered stats for CSV export (RLS-scoped)
     let mQuery = teamId !== "all"
       ? supabase.from("daily_stats").select("*, team_members!inner(name, nickname, team_id)").gte("date", monthStart).lte("date", selectedDate).eq("team_members.team_id", teamId)
       : supabase.from("daily_stats").select("*, team_members(name, nickname)").gte("date", monthStart).lte("date", selectedDate);
@@ -135,12 +145,13 @@ const Dashboard = () => {
 
   const sum = (key: string) => stats.reduce((a, r) => a + Number(r[key] || 0), 0);
 
-  const totalSignups = sum("signups_count");
-  const totalDepositors = sum("deposit_count");
+  // Global KPIs from security definer function — visible to ALL roles
+  const totalSignups = Number(globalStats.signups_count || 0);
+  const totalDepositors = Number(globalStats.deposit_count || 0);
   const conversion = totalSignups > 0 ? (totalDepositors / totalSignups) * 100 : 0;
-  const firstDeposit = sum("first_deposit_amount");
-  const totalDeposit = sum("total_deposit_amount");
-  const adSpendUsd = sum("ad_spend_usd");
+  const firstDeposit = Number(globalStats.first_deposit_amount || 0);
+  const totalDeposit = Number(globalStats.total_deposit_amount || 0);
+  const adSpendUsd = Number(globalStats.ad_spend_usd || 0);
   const adSpendThb = Math.round(adSpendUsd * THB_RATE);
   const costPerHead = totalSignups > 0 ? Math.round((adSpendUsd * THB_RATE) / totalSignups) : 0;
 
