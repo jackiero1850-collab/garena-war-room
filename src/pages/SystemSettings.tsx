@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
@@ -7,12 +8,14 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Plus, Pencil, Trash2, Shield, Globe, Users, Tag, Layers, FileType, Settings2, Upload, Zap } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Plus, Pencil, Trash2, Shield, Globe, Users, Tag, Layers, FileType, Settings2, Upload, Zap, ScrollText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
 
 interface NamedItem { id: string; name: string; }
 interface ActionTypeItem { id: string; name: string; color_hex: string; }
+interface ActivityLog { id: string; user_id: string; action: string; target_table: string; target_id: string | null; details: any; created_at: string; }
 
 const SystemSettings = () => {
   const { user, role } = useAuth();
@@ -22,6 +25,8 @@ const SystemSettings = () => {
   const [assignmentTypes, setAssignmentTypes] = useState<NamedItem[]>([]);
   const [briefTypes, setBriefTypes] = useState<NamedItem[]>([]);
   const [actionTypes, setActionTypes] = useState<ActionTypeItem[]>([]);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, string>>({});
 
   const [appName, setAppName] = useState("WAR ROOM");
   const [appLogoUrl, setAppLogoUrl] = useState("");
@@ -32,9 +37,8 @@ const SystemSettings = () => {
   const [formName, setFormName] = useState("");
   const [formColorHex, setFormColorHex] = useState("#6b7280");
 
-
   const fetchData = async () => {
-    const [{ data: wData }, { data: tData }, { data: rData }, { data: atData }, { data: btData }, { data: sData }, { data: actData }] = await Promise.all([
+    const [{ data: wData }, { data: tData }, { data: rData }, { data: atData }, { data: btData }, { data: sData }, { data: actData }, { data: logData }, { data: pData }] = await Promise.all([
       supabase.from("websites").select("*").order("name"),
       supabase.from("teams").select("*").order("name"),
       supabase.from("master_roles").select("*").order("name"),
@@ -42,6 +46,8 @@ const SystemSettings = () => {
       supabase.from("master_brief_types").select("*").order("name"),
       supabase.from("app_settings").select("key, value"),
       supabase.from("task_action_types").select("*").order("name"),
+      supabase.from("activity_logs").select("*").order("created_at", { ascending: false }).limit(100),
+      supabase.from("profiles").select("id, username, email"),
     ]);
     setWebsites((wData as NamedItem[]) || []);
     setTeams((tData as NamedItem[]) || []);
@@ -49,6 +55,10 @@ const SystemSettings = () => {
     setAssignmentTypes((atData as NamedItem[]) || []);
     setBriefTypes((btData as NamedItem[]) || []);
     setActionTypes((actData as ActionTypeItem[]) || []);
+    setActivityLogs((logData as ActivityLog[]) || []);
+    const pMap: Record<string, string> = {};
+    (pData || []).forEach((p: any) => { pMap[p.id] = p.username || p.email; });
+    setProfiles(pMap);
     const sMap: Record<string, string> = {};
     (sData || []).forEach((r: any) => { sMap[r.key] = r.value; });
     setAppName(sMap["app_name"] || "WAR ROOM");
@@ -132,7 +142,6 @@ const SystemSettings = () => {
     setLogoUploading(false);
   };
 
-
   const renderTable = (type: string, items: NamedItem[]) => (
     <div className="space-y-4">
       <div className="flex justify-end">
@@ -169,6 +178,9 @@ const SystemSettings = () => {
     </div>
   );
 
+  const actionLabel: Record<string, string> = { DELETE: "ลบ", UPDATE: "แก้ไข" };
+  const tableLabel: Record<string, string> = { daily_stats: "ข้อมูลรายวัน", assignments: "งานที่มอบหมาย" };
+
   const dialogTitle = dialogType ? (editId ? `แก้ไข${labelMap[dialogType]}` : `เพิ่ม${labelMap[dialogType]}`) : "";
 
   return (
@@ -184,6 +196,7 @@ const SystemSettings = () => {
           <TabsTrigger value="assignment_types" className="gap-2"><Layers className="h-3.5 w-3.5" /> ประเภทงาน</TabsTrigger>
           <TabsTrigger value="brief_types" className="gap-2"><FileType className="h-3.5 w-3.5" /> ประเภทบรีฟ</TabsTrigger>
           <TabsTrigger value="action_types" className="gap-2"><Zap className="h-3.5 w-3.5" /> ประเภทแอคชั่น</TabsTrigger>
+          <TabsTrigger value="activity_logs" className="gap-2"><ScrollText className="h-3.5 w-3.5" /> ประวัติการแก้ไข</TabsTrigger>
         </TabsList>
 
         <TabsContent value="app" className="space-y-4">
@@ -251,6 +264,40 @@ const SystemSettings = () => {
           </div>
         </TabsContent>
 
+        <TabsContent value="activity_logs">
+          <div className="rounded border border-border bg-card overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="border-border hover:bg-transparent">
+                  <TableHead className="text-xs uppercase text-muted-foreground">วันที่</TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground">ผู้ดำเนินการ</TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground">การกระทำ</TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground">ตาราง</TableHead>
+                  <TableHead className="text-xs uppercase text-muted-foreground">รายละเอียด</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {activityLogs.length === 0 ? (
+                  <TableRow><TableCell colSpan={5} className="py-8 text-center text-sm text-muted-foreground">ยังไม่มีประวัติ</TableCell></TableRow>
+                ) : activityLogs.map((log) => (
+                  <TableRow key={log.id} className="border-border">
+                    <TableCell className="text-sm whitespace-nowrap">{format(new Date(log.created_at), "dd/MM/yyyy HH:mm")}</TableCell>
+                    <TableCell className="text-sm">{profiles[log.user_id] || log.user_id.slice(0, 8)}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline" className={log.action === "DELETE" ? "border-destructive/50 text-destructive text-xs" : "text-xs"}>
+                        {actionLabel[log.action] || log.action}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm">{tableLabel[log.target_table] || log.target_table}</TableCell>
+                    <TableCell className="text-xs max-w-[300px] truncate text-muted-foreground">
+                      {log.details ? JSON.stringify(log.details).slice(0, 120) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
+        </TabsContent>
       </Tabs>
 
       <Dialog open={!!dialogType && dialogType !== "app"} onOpenChange={() => setDialogType(null)}>

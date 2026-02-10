@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { format, differenceInDays, addDays, startOfMonth, endOfMonth, eachDayOfInterval, isSameDay, isSameMonth } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User, FileBarChart } from "lucide-react";
+import { Plus, Upload, CheckCircle2, Clock, ChevronLeft, ChevronRight, Image, Pencil, Trash2, User, FileBarChart, Copy, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "@/hooks/use-toast";
 import { compressToWebp } from "@/lib/imageUtils";
@@ -23,7 +23,7 @@ interface Assignment {
   id: string; title: string; description: string | null; due_date: string;
   type: string; status: string; created_by: string | null; created_at: string;
   cover_image_url: string | null; website: string | null; assigned_to: string | null;
-  action_type_id: string | null;
+  action_type_id: string | null; asset_link: string | null;
 }
 
 interface Submission {
@@ -31,6 +31,12 @@ interface Submission {
   image_proof_urls: string[]; notes: string | null; submitted_at: string;
   submitted_by_member_id: string | null;
 }
+
+interface TeamMember {
+  id: string; name: string; nickname: string | null; team_id: string | null;
+}
+
+const formatDateDD = (d: string | Date) => format(typeof d === "string" ? new Date(d) : d, "dd/MM/yyyy");
 
 const Assignments = () => {
   const { user, role } = useAuth();
@@ -40,14 +46,20 @@ const Assignments = () => {
   const [websites, setWebsites] = useState<{ id: string; name: string }[]>([]);
   const [assignmentTypes, setAssignmentTypes] = useState<{ id: string; name: string }[]>([]);
   const [actionTypes, setActionTypes] = useState<ActionType[]>([]);
-  const [rosterMembers, setRosterMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
-  const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; nickname: string | null }[]>([]);
+  const [rosterMembers, setRosterMembers] = useState<TeamMember[]>([]);
+  const [salesMembers, setSalesMembers] = useState<TeamMember[]>([]);
+  const [teams, setTeams] = useState<{ id: string; name: string }[]>([]);
   const [showReport, setShowReport] = useState(false);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
   const [showCreate, setShowCreate] = useState(false);
   const [showSubmit, setShowSubmit] = useState(false);
   const [editingAssignment, setEditingAssignment] = useState<Assignment | null>(null);
+
+  // Filters
+  const [filterTeam, setFilterTeam] = useState("all");
+  const [filterMember, setFilterMember] = useState("all");
+  const [filterWebsite, setFilterWebsite] = useState("all");
 
   const [newTitle, setNewTitle] = useState("");
   const [newDesc, setNewDesc] = useState("");
@@ -56,6 +68,7 @@ const Assignments = () => {
   const [newWebsite, setNewWebsite] = useState<string>("none");
   const [newAssignedTo, setNewAssignedTo] = useState<string>("none");
   const [newActionTypeId, setNewActionTypeId] = useState<string>("none");
+  const [newAssetLink, setNewAssetLink] = useState("");
   const [coverUploading, setCoverUploading] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string>("");
 
@@ -64,15 +77,16 @@ const Assignments = () => {
   const [uploadedUrls, setUploadedUrls] = useState<string[]>([]);
 
   const fetchData = async () => {
-    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }, { data: smData }, { data: actData }] = await Promise.all([
+    const [{ data: aData }, { data: sData }, { data: pData }, { data: wData }, { data: atData }, { data: rmData }, { data: smData }, { data: actData }, { data: tData }] = await Promise.all([
       supabase.from("assignments").select("*").order("due_date", { ascending: true }),
       supabase.from("assignment_submissions").select("*"),
       supabase.from("profiles").select("id, username, email"),
       supabase.from("websites").select("id, name").order("name"),
       supabase.from("master_assignment_types").select("id, name").order("name"),
-      supabase.from("team_members").select("id, name, nickname").order("name"),
-      supabase.from("team_members").select("id, name, nickname, role").in("role", ["Sales", "Leader", "Head"]).order("name"),
+      supabase.from("team_members").select("id, name, nickname, team_id").order("name"),
+      supabase.from("team_members").select("id, name, nickname, role, team_id").in("role", ["Sales", "Leader", "Head"]).order("name"),
       supabase.from("task_action_types").select("*").order("name"),
+      supabase.from("teams").select("id, name").order("name"),
     ]);
     setAssignments((aData as Assignment[]) || []);
     setSubmissions((sData as Submission[]) || []);
@@ -82,25 +96,51 @@ const Assignments = () => {
     setWebsites((wData as any[]) || []);
     setAssignmentTypes((atData as any[]) || []);
     setActionTypes((actData as ActionType[]) || []);
-    setRosterMembers((rmData as any[]) || []);
-    setSalesMembers((smData as any[]) || []);
+    setRosterMembers((rmData as TeamMember[]) || []);
+    setSalesMembers((smData as TeamMember[]) || []);
+    setTeams((tData as any[]) || []);
   };
 
   useEffect(() => { fetchData(); }, []);
 
-  // Roster member lookup
   const rosterMap: Record<string, string> = {};
   rosterMembers.forEach((m) => { rosterMap[m.id] = m.nickname || m.name; });
 
+  const memberTeamMap: Record<string, string | null> = {};
+  rosterMembers.forEach((m) => { memberTeamMap[m.id] = m.team_id; });
+
+  const actionTypeMap: Record<string, ActionType> = {};
+  actionTypes.forEach((at) => { actionTypeMap[at.id] = at; });
+
+  // Filter logic for calendar
+  const filteredAssignments = useMemo(() => {
+    return assignments.filter((a) => {
+      if (filterWebsite !== "all" && a.website !== filterWebsite) return false;
+      if (filterMember !== "all" && a.assigned_to !== filterMember) return false;
+      if (filterTeam !== "all") {
+        if (!a.assigned_to) return true; // "All Team" tasks show for any team filter
+        const mTeam = memberTeamMap[a.assigned_to];
+        if (mTeam !== filterTeam) return false;
+      }
+      return true;
+    });
+  }, [assignments, filterWebsite, filterMember, filterTeam, memberTeamMap]);
+
   const openCreate = () => {
     setEditingAssignment(null);
-    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setNewAssignedTo("none"); setNewActionTypeId("none"); setCoverUrl("");
+    setNewTitle(""); setNewDesc(""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType("event"); setNewWebsite("none"); setNewAssignedTo("none"); setNewActionTypeId("none"); setCoverUrl(""); setNewAssetLink("");
     setShowCreate(true);
   };
 
   const openEdit = (a: Assignment) => {
     setEditingAssignment(a);
-    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setNewActionTypeId(a.action_type_id || "none"); setCoverUrl(a.cover_image_url || "");
+    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(a.due_date); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setNewActionTypeId(a.action_type_id || "none"); setCoverUrl(a.cover_image_url || ""); setNewAssetLink(a.asset_link || "");
+    setShowCreate(true);
+  };
+
+  const openDuplicate = (a: Assignment) => {
+    setEditingAssignment(null);
+    setNewTitle(a.title); setNewDesc(a.description || ""); setNewDueDate(format(new Date(), "yyyy-MM-dd")); setNewType(a.type); setNewWebsite(a.website || "none"); setNewAssignedTo(a.assigned_to || "none"); setNewActionTypeId(a.action_type_id || "none"); setCoverUrl(a.cover_image_url || ""); setNewAssetLink(a.asset_link || "");
     setShowCreate(true);
   };
 
@@ -127,6 +167,7 @@ const Assignments = () => {
       type: newType, cover_image_url: coverUrl || null, website: newWebsite === "none" ? null : newWebsite,
       assigned_to: newAssignedTo === "none" ? null : newAssignedTo,
       action_type_id: newActionTypeId === "none" ? null : newActionTypeId,
+      asset_link: newAssetLink.trim() || null,
     };
     if (editingAssignment) {
       const { error } = await supabase.from("assignments").update(payload).eq("id", editingAssignment.id);
@@ -196,27 +237,39 @@ const Assignments = () => {
       s.submitted_by_member_id && salesMemberMap[s.submitted_by_member_id] ? salesMemberMap[s.submitted_by_member_id] : profiles[s.user_id] || "ไม่ทราบ"
     );
 
-  // Get submission history for the selected assignment
   const assignmentSubmissions = selectedAssignment
     ? submissions.filter(s => s.assignment_id === selectedAssignment.id)
     : [];
 
-  const actionTypeMap: Record<string, ActionType> = {};
-  actionTypes.forEach((at) => { actionTypeMap[at.id] = at; });
+  const getCardBg = (a: Assignment) => {
+    if (!a.action_type_id) return "bg-red-600 text-white";
+    const at = actionTypeMap[a.action_type_id];
+    if (!at) return "bg-red-600 text-white";
+    const name = at.name.toLowerCase();
+    if (name.includes("เครดิต")) return "bg-green-600 text-white";
+    if (name.includes("ของ")) return "bg-purple-600 text-white";
+    return "bg-red-600 text-white";
+  };
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
   const calendarDays = eachDayOfInterval({ start: addDays(monthStart, -monthStart.getDay()), end: addDays(monthEnd, 6 - monthEnd.getDay()) });
 
-  const getAssignmentsForDay = (day: Date) => assignments.filter((a) => isSameDay(new Date(a.due_date), day));
+  const getAssignmentsForDay = (day: Date) => filteredAssignments.filter((a) => isSameDay(new Date(a.due_date), day));
 
   const today = new Date();
-  const todayMissions = assignments.filter((a) => isSameDay(new Date(a.due_date), today));
-  const incomingMissions = assignments.filter((a) => {
+  const todayMissions = filteredAssignments.filter((a) => isSameDay(new Date(a.due_date), today));
+  const incomingMissions = filteredAssignments.filter((a) => {
     const d = new Date(a.due_date);
     const diff = differenceInDays(d, today);
     return diff >= 1 && diff <= 3;
   });
+
+  // Filter members by selected team
+  const filteredMemberOptions = useMemo(() => {
+    if (filterTeam === "all") return rosterMembers;
+    return rosterMembers.filter(m => m.team_id === filterTeam);
+  }, [filterTeam, rosterMembers]);
 
   if (showReport) {
     return (
@@ -242,12 +295,45 @@ const Assignments = () => {
         </div>
       </div>
 
+      {/* Filters */}
+      <div className="flex flex-wrap items-end gap-3">
+        <Select value={filterTeam} onValueChange={(v) => { setFilterTeam(v); setFilterMember("all"); }}>
+          <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกทีม" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">ทุกทีม</SelectItem>
+            {teams.map((t) => (<SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Select value={filterMember} onValueChange={setFilterMember}>
+          <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกคน" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">ทุกคน</SelectItem>
+            {filteredMemberOptions.map((m) => (<SelectItem key={m.id} value={m.id}>{m.nickname || m.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
+        <Select value={filterWebsite} onValueChange={setFilterWebsite}>
+          <SelectTrigger className="w-[160px] border-border bg-card"><SelectValue placeholder="ทุกเว็บ" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">ทุกเว็บไซต์</SelectItem>
+            {websites.map((w) => (<SelectItem key={w.id} value={w.name}>{w.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Calendar */}
       <div className="rounded border border-border bg-card">
         <div className="flex items-center justify-between border-b border-border px-4 py-3">
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addDays(startOfMonth(m), -1))}><ChevronLeft className="h-4 w-4" /></Button>
-          <h3 className="font-display text-sm uppercase tracking-wider text-foreground">{format(currentMonth, "MMMM yyyy")}</h3>
-          <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addDays(endOfMonth(m), 1))}><ChevronRight className="h-4 w-4" /></Button>
+          <div className="flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addDays(startOfMonth(m), -1))}><ChevronLeft className="h-4 w-4" /></Button>
+            <h3 className="font-display text-sm uppercase tracking-wider text-foreground">{format(currentMonth, "MMMM yyyy")}</h3>
+            <Button variant="ghost" size="icon" onClick={() => setCurrentMonth((m) => addDays(endOfMonth(m), 1))}><ChevronRight className="h-4 w-4" /></Button>
+          </div>
+          {/* Legend */}
+          <div className="flex items-center gap-3 text-[10px]">
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-red-600 inline-block" /> ไม่แจก</span>
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-green-600 inline-block" /> แจกเครดิต</span>
+            <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-full bg-purple-600 inline-block" /> แจกของ</span>
+          </div>
         </div>
         <div className="grid grid-cols-7 border-b border-border">
           {["อา", "จ", "อ", "พ", "พฤ", "ศ", "ส"].map((d) => (
@@ -263,7 +349,7 @@ const Assignments = () => {
                 <span className={cn("block text-xs", isToday ? "font-bold text-primary" : "text-muted-foreground")}>{format(day, "d")}</span>
                 {dayAssignments.map((a) => (
                   <button key={a.id} onClick={() => setSelectedAssignment(a)}
-                    className={cn("mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] font-medium flex items-center gap-1", a.type === "event" ? "bg-primary/20 text-primary" : "bg-accent/40 text-accent-foreground")}>
+                    className={cn("mt-0.5 w-full rounded px-1 py-0.5 text-left text-[10px] font-medium flex items-center gap-1", getCardBg(a))}>
                     {a.cover_image_url && <img src={a.cover_image_url} alt="" className="h-5 w-5 rounded-sm object-cover shrink-0" />}
                     <span className="truncate">{a.title}</span>
                   </button>
@@ -367,10 +453,22 @@ const Assignments = () => {
                 {selectedAssignment.assigned_to && rosterMap[selectedAssignment.assigned_to] && (
                   <Badge variant="outline" className="text-primary border-primary/30"><User className="mr-1 h-3 w-3" />{rosterMap[selectedAssignment.assigned_to]}</Badge>
                 )}
+                {selectedAssignment.action_type_id && actionTypeMap[selectedAssignment.action_type_id] && (
+                  <Badge variant="outline" style={{ color: actionTypeMap[selectedAssignment.action_type_id].color_hex, borderColor: actionTypeMap[selectedAssignment.action_type_id].color_hex + "50" }}>
+                    <span className="inline-block h-2 w-2 rounded-full mr-1" style={{ backgroundColor: actionTypeMap[selectedAssignment.action_type_id].color_hex }} />
+                    {actionTypeMap[selectedAssignment.action_type_id].name}
+                  </Badge>
+                )}
                 {getCountdownBadge(selectedAssignment.due_date)}
-                <span className="text-sm text-muted-foreground">กำหนด: {format(new Date(selectedAssignment.due_date), "dd-MM-yyyy")}</span>
+                <span className="text-sm text-muted-foreground">กำหนด: {formatDateDD(selectedAssignment.due_date)}</span>
               </div>
               {selectedAssignment.description && <p className="text-sm text-muted-foreground">{selectedAssignment.description}</p>}
+              {selectedAssignment.asset_link && (
+                <a href={selectedAssignment.asset_link} target="_blank" rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 rounded border border-blue-500/30 bg-blue-500/10 px-3 py-1.5 text-sm text-blue-500 hover:bg-blue-500/20 transition-colors">
+                  <Download className="h-3.5 w-3.5" /> ดาวน์โหลดรูปภาพ
+                </a>
+              )}
               <div className="space-y-2 pt-2">
                 <p className="text-xs uppercase tracking-wider text-muted-foreground">สถานะการส่ง</p>
                 {getSubmitters(selectedAssignment.id).length > 0 ? (
@@ -393,8 +491,9 @@ const Assignments = () => {
                 )}
                 {role === "manager" && (
                   <>
-                    <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openEdit(a); }}><Pencil className="h-4 w-4" /></Button>
-                    <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(selectedAssignment.id)}><Trash2 className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openEdit(a); }} title="แก้ไข"><Pencil className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" onClick={() => { const a = selectedAssignment; setSelectedAssignment(null); openDuplicate(a); }} title="ทำซ้ำ"><Copy className="h-4 w-4" /></Button>
+                    <Button variant="outline" size="icon" className="text-destructive hover:text-destructive" onClick={() => handleDelete(selectedAssignment.id)} title="ลบ"><Trash2 className="h-4 w-4" /></Button>
                   </>
                 )}
               </div>
@@ -447,7 +546,7 @@ const Assignments = () => {
                       <span className="font-medium text-foreground">
                         {s.submitted_by_member_id && salesMemberMap[s.submitted_by_member_id] ? salesMemberMap[s.submitted_by_member_id] : profiles[s.user_id] || "ไม่ทราบ"}
                       </span>
-                      <span>- {format(new Date(s.submitted_at), "dd-MM-yyyy HH:mm")}</span>
+                      <span>- {format(new Date(s.submitted_at), "dd/MM/yyyy HH:mm")}</span>
                     </div>
                   ))}
                 </div>
@@ -459,7 +558,7 @@ const Assignments = () => {
 
       {/* Create/Edit Assignment Dialog */}
       <Dialog open={showCreate} onOpenChange={setShowCreate}>
-        <DialogContent className="border-border bg-card">
+        <DialogContent className="border-border bg-card max-h-[90vh] overflow-y-auto">
           <DialogHeader><DialogTitle className="font-display uppercase tracking-wider">{editingAssignment ? "แก้ไขงาน" : "สร้างงานใหม่"}</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -525,6 +624,10 @@ const Assignments = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-xs uppercase tracking-wider text-muted-foreground">ลิงก์รูปภาพ/Asset</Label>
+              <Input value={newAssetLink} onChange={(e) => setNewAssetLink(e.target.value)} className="border-border bg-muted/50" placeholder="https://..." />
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">ภาพปก</Label>
