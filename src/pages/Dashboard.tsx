@@ -25,21 +25,25 @@ const Dashboard = () => {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
 
   // Event popup state
-  const [eventPopup, setEventPopup] = useState<{ title: string; cover_image_url: string | null } | null>(null);
+  const [eventPopup, setEventPopup] = useState<{ id: string; title: string; cover_image_url: string | null } | null>(null);
   const [eventDismissed, setEventDismissed] = useState(false);
 
-  // Check for today's event assignments
+  // Check for today's event assignments (with session memory)
   useEffect(() => {
     const checkTodayEvents = async () => {
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const { data } = await supabase
         .from("assignments")
-        .select("title, cover_image_url")
+        .select("id, title, cover_image_url")
         .eq("due_date", todayStr)
         .eq("type", "event")
         .limit(1);
-      if (data && data.length > 0 && !eventDismissed) {
-        setEventPopup(data[0]);
+      if (data && data.length > 0) {
+        const evt = data[0];
+        const seenKey = `seen_event_${evt.id}`;
+        if (!localStorage.getItem(seenKey)) {
+          setEventPopup(evt);
+        }
       }
     };
     checkTodayEvents();
@@ -153,7 +157,7 @@ const Dashboard = () => {
   return (
     <div className="space-y-6 p-6">
       {/* Event Popup */}
-      <Dialog open={!!eventPopup && !eventDismissed} onOpenChange={() => { setEventDismissed(true); setEventPopup(null); }}>
+      <Dialog open={!!eventPopup && !eventDismissed} onOpenChange={() => { if (eventPopup) localStorage.setItem(`seen_event_${eventPopup.id}`, 'true'); setEventDismissed(true); setEventPopup(null); }}>
         <DialogContent className="border-border bg-card max-w-lg">
           <DialogHeader><DialogTitle className="font-display text-xl uppercase tracking-wider text-primary">📢 อีเว้นท์วันนี้!</DialogTitle></DialogHeader>
           <div className="space-y-4">
@@ -161,7 +165,7 @@ const Dashboard = () => {
               <img src={eventPopup.cover_image_url} alt="Event" className="w-full rounded border border-border object-cover max-h-64" />
             )}
             <h2 className="text-lg font-bold text-foreground">{eventPopup?.title}</h2>
-            <Button onClick={() => { setEventDismissed(true); setEventPopup(null); }} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
+            <Button onClick={() => { if (eventPopup) localStorage.setItem(`seen_event_${eventPopup.id}`, 'true'); setEventDismissed(true); setEventPopup(null); }} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">
               รับทราบ
             </Button>
           </div>
