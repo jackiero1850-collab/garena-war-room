@@ -240,7 +240,7 @@ const DailyInput = () => {
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">ลิงก์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">หมายเหตุ</TableHead>
-              {(role === "manager" || role === "leader") && (
+              {(role === "manager" || role === "leader" || (role as string) === "head") && (
                 <TableHead className="text-xs uppercase text-muted-foreground w-12"></TableHead>
               )}
             </TableRow>
@@ -276,9 +276,9 @@ const DailyInput = () => {
                     <TableCell className="max-w-[200px] text-xs" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                       {row.note || "—"}
                     </TableCell>
-                    {(role === "manager" || role === "leader") && (
+                    {(role === "manager" || role === "leader" || (role as string) === "head") && (
                       <TableCell>
-                        {(role === "manager" || (role === "leader" && profile?.team_id && row.team_id === profile.team_id)) && (
+                        {(role === "manager" || role === "leader" || ((role as string) === "head" && profile?.team_id && row.team_id === profile.team_id)) && (
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={async () => {
                             if (!confirm("ต้องการลบข้อมูลนี้?")) return;
                             const { error } = await supabase.from("daily_stats").delete().eq("id", row.id);

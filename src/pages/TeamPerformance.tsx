@@ -41,7 +41,7 @@ const TeamPerformance = () => {
     let query = supabase.from("team_members").select("id, name, nickname, team_id").in("role", ["Sales", "Leader", "Head"]).order("name");
     if (selectedTeamId !== "all") {
       query = query.eq("team_id", selectedTeamId);
-    } else if ((role === "leader" || role === "sales") && profile?.team_id) {
+    } else if ((role === "leader" || role === "sales" || (role as string) === "head") && profile?.team_id) {
       query = query.eq("team_id", profile.team_id);
     }
     query.then(({ data }) => {
@@ -60,7 +60,7 @@ const TeamPerformance = () => {
       .lte("date", dateTo)
       .order("date", { ascending: false });
 
-    if ((role === "leader" || role === "sales") && profile?.team_id) {
+    if ((role === "leader" || role === "sales" || (role as string) === "head") && profile?.team_id) {
       query = query.eq("team_id", profile.team_id);
     } else if (role === "manager" && selectedTeamId !== "all") {
       query = query.eq("team_id", selectedTeamId);
@@ -80,7 +80,7 @@ const TeamPerformance = () => {
 
   useEffect(() => { fetchData(); }, [user, role, dateFrom, dateTo, selectedTeamId, websiteFilter, memberFilter]);
 
-  if (role !== "manager" && role !== "leader" && role !== "sales") {
+  if (role !== "manager" && role !== "leader" && role !== "sales" && (role as string) !== "head") {
     return (
       <div className="flex h-full items-center justify-center p-6">
         <div className="text-center">
@@ -104,7 +104,8 @@ const TeamPerformance = () => {
 
   const canDelete = (rowTeamId: string | null) => {
     if (role === "manager") return true;
-    if (role === "leader" && profile?.team_id && rowTeamId === profile.team_id) return true;
+    if (role === "leader") return true;
+    if ((role as string) === "head" && profile?.team_id && rowTeamId === profile.team_id) return true;
     return false;
   };
 
@@ -207,7 +208,7 @@ const TeamPerformance = () => {
               <TableHead className="text-xs uppercase text-muted-foreground">เว็บไซต์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">ลิงก์</TableHead>
               <TableHead className="text-xs uppercase text-muted-foreground min-w-[120px]">หมายเหตุ</TableHead>
-              {(role === "manager" || role === "leader") && (
+              {(role === "manager" || role === "leader" || (role as string) === "head") && (
                 <TableHead className="text-xs uppercase text-muted-foreground w-12"></TableHead>
               )}
             </TableRow>
@@ -243,7 +244,7 @@ const TeamPerformance = () => {
                   <TableCell className="max-w-[200px] text-xs" style={{ whiteSpace: "normal", wordBreak: "break-word" }}>
                     {r.note || "—"}
                   </TableCell>
-                  {(role === "manager" || role === "leader") && (
+                  {(role === "manager" || role === "leader" || (role as string) === "head") && (
                     <TableCell>
                       {canDelete(r.team_id) && (
                         <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(r.id)}>

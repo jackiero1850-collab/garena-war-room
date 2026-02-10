@@ -564,6 +564,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_head: { Args: never; Returns: boolean }
       is_leader: { Args: never; Returns: boolean }
       is_manager: { Args: never; Returns: boolean }
     }
