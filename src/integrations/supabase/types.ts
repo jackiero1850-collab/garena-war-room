@@ -123,7 +123,7 @@ export type Database = {
           id: string
           status: Database["public"]["Enums"]["assignment_status"]
           title: string
-          type: Database["public"]["Enums"]["assignment_type"]
+          type: string
           updated_at: string
           website: string | null
         }
@@ -139,7 +139,7 @@ export type Database = {
           id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
           title: string
-          type?: Database["public"]["Enums"]["assignment_type"]
+          type?: string
           updated_at?: string
           website?: string | null
         }
@@ -155,7 +155,7 @@ export type Database = {
           id?: string
           status?: Database["public"]["Enums"]["assignment_status"]
           title?: string
-          type?: Database["public"]["Enums"]["assignment_type"]
+          type?: string
           updated_at?: string
           website?: string | null
         }
@@ -568,9 +568,8 @@ export type Database = {
       is_manager: { Args: never; Returns: boolean }
     }
     Enums: {
-      app_role: "manager" | "leader" | "sales" | "graphic"
+      app_role: "manager" | "leader" | "sales" | "graphic" | "head"
       assignment_status: "upcoming" | "active" | "completed"
-      assignment_type: "event" | "live"
       brief_status: "queue" | "cutting" | "done" | "fix"
     }
     CompositeTypes: {
@@ -699,9 +698,8 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["manager", "leader", "sales", "graphic"],
+      app_role: ["manager", "leader", "sales", "graphic", "head"],
       assignment_status: ["upcoming", "active", "completed"],
-      assignment_type: ["event", "live"],
       brief_status: ["queue", "cutting", "done", "fix"],
     },
   },
