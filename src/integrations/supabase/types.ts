@@ -42,6 +42,7 @@ export type Database = {
           image_proof_urls: string[] | null
           notes: string | null
           submitted_at: string
+          submitted_by_member_id: string | null
           user_id: string
         }
         Insert: {
@@ -50,6 +51,7 @@ export type Database = {
           image_proof_urls?: string[] | null
           notes?: string | null
           submitted_at?: string
+          submitted_by_member_id?: string | null
           user_id: string
         }
         Update: {
@@ -58,6 +60,7 @@ export type Database = {
           image_proof_urls?: string[] | null
           notes?: string | null
           submitted_at?: string
+          submitted_by_member_id?: string | null
           user_id?: string
         }
         Relationships: [
@@ -66,6 +69,13 @@ export type Database = {
             columns: ["assignment_id"]
             isOneToOne: false
             referencedRelation: "assignments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "assignment_submissions_submitted_by_member_id_fkey"
+            columns: ["submitted_by_member_id"]
+            isOneToOne: false
+            referencedRelation: "team_members"
             referencedColumns: ["id"]
           },
         ]

@@ -251,13 +251,10 @@ const GraphicBriefs = () => {
                     <Clock className="mr-1 h-3 w-3" /> รอดำเนินการ
                   </Badge>
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium text-foreground">{brief.brief_type}</p>
                     <p className="text-xs text-muted-foreground">
-                      <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
+                      {formatDate(brief.request_date)} {brief.request_time || ""} | {brief.brief_type} | <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
                       {" → "}
                       {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "ยังไม่มอบหมาย"}
-                      {" · "}
-                      {brief.request_time || "—"}
                     </p>
                   </div>
                   <Button size="sm" variant="outline" onClick={() => markDone(brief.id)} className="shrink-0 text-xs text-[hsl(var(--warroom-success))]">
@@ -278,13 +275,10 @@ const GraphicBriefs = () => {
                       <CheckCircle2 className="mr-1 h-3 w-3" /> เสร็จแล้ว
                     </Badge>
                     <div className="min-w-0 flex-1">
-                      <p className="truncate text-sm text-foreground">{brief.brief_type}</p>
                       <p className="text-xs text-muted-foreground">
-                        <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
+                        {formatDate(brief.request_date)} {brief.request_time || ""} | {brief.brief_type} | <span className="text-primary">{brief.description && salesMap[brief.description] ? salesMap[brief.description] : profiles[brief.sales_user_id] || "—"}</span>
                         {" → "}
                         {brief.graphic_user_id ? graphicMap[brief.graphic_user_id] || "—" : "—"}
-                        {" · "}
-                        {brief.completion_date ? formatDate(brief.completion_date) : "—"}
                       </p>
                     </div>
                   </div>

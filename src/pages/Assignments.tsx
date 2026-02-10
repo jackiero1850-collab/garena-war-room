@@ -23,6 +23,7 @@ interface Assignment {
 interface Submission {
   id: string; assignment_id: string; user_id: string;
   image_proof_urls: string[]; notes: string | null; submitted_at: string;
+  submitted_by_member_id: string | null;
 }
 
 const Assignments = () => {
@@ -158,7 +159,7 @@ const Assignments = () => {
     if (!selectedAssignment || !user || !submitById) return;
     const { error } = await supabase.from("assignment_submissions").insert({
       assignment_id: selectedAssignment.id, user_id: user.id,
-      image_proof_urls: uploadedUrls, notes: submitById || null,
+      image_proof_urls: uploadedUrls, submitted_by_member_id: submitById || null,
     } as any);
     if (error) { toast({ title: "ผิดพลาด", description: error.message, variant: "destructive" }); return; }
     toast({ title: "ส่งหลักฐานแล้ว!" });
@@ -175,8 +176,17 @@ const Assignments = () => {
   const hasSubmitted = (assignmentId: string) =>
     submissions.some((s) => s.assignment_id === assignmentId && s.user_id === user?.id);
 
+  const salesMemberMap: Record<string, string> = {};
+  salesMembers.forEach((m) => { salesMemberMap[m.id] = m.nickname || m.name; });
+
   const getSubmitters = (assignmentId: string) =>
-    submissions.filter((s) => s.assignment_id === assignmentId).map((s) => profiles[s.user_id] || "ไม่ทราบ");
+    submissions.filter((s) => s.assignment_id === assignmentId).map((s) =>
+      s.submitted_by_member_id && salesMemberMap[s.submitted_by_member_id] ? salesMemberMap[s.submitted_by_member_id] : profiles[s.user_id] || "ไม่ทราบ"
+    );
+
+  const isDuplicate = selectedAssignment && submitById
+    ? submissions.some(s => s.assignment_id === selectedAssignment.id && s.submitted_by_member_id === submitById)
+    : false;
 
   const monthStart = startOfMonth(currentMonth);
   const monthEnd = endOfMonth(currentMonth);
@@ -378,6 +388,9 @@ const Assignments = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {isDuplicate && (
+                <p className="text-sm text-destructive font-medium">คนนี้ส่งงานแล้ว</p>
+              )}
             </div>
             <div className="space-y-2">
               <Label className="text-xs uppercase tracking-wider text-muted-foreground">อัปโหลดรูปภาพ</Label>
@@ -392,7 +405,7 @@ const Assignments = () => {
                 </div>
               )}
             </div>
-            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0 || !submitById} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
+            <Button onClick={handleSubmitProof} disabled={uploadedUrls.length === 0 || !submitById || isDuplicate} className="w-full bg-primary font-display uppercase tracking-wider hover:bg-primary/90">ส่ง</Button>
           </div>
         </DialogContent>
       </Dialog>
