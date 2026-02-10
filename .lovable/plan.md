@@ -1,67 +1,68 @@
 
 
-# Marketing Operations Platform (War Room) — Phase 1: Core Build
+# Plan: Graphic Briefs Date Display + Assignment Multi-Submit Fix
 
-## Theme & Design
-- **Garena-style dark theme**: Black background (`#0A0A0A`), primary red (`#FF0000`), dark red accents, high-contrast white text
-- Aggressive but clean aesthetic with sharp corners, bold typography, and subtle red glows/borders
-- Fully responsive sidebar layout
+## Update 1: Graphic Briefs Queue - Add Date Display
 
-## 1. Authentication & User Management
-- **Email/Password login page** with Garena-styled dark form
-- **Role-based access**: 4 roles stored in a separate `user_roles` table (manager, leader, sales, graphic)
-- **Admin User Management page** (manager role only):
-  - Create, edit, delete users
-  - Assign roles and teams
-  - View all users in a searchable table
-- **Profile settings** accessible from the top bar (avatar, username, password change)
+**Current state:** Active queue cards show `[Requester] -> [Designer] . [Time]`
+**Target:** Show `[Date] [Time] | [Type] | [Requester] -> [Designer]`
 
-## 2. Database Schema (Supabase)
-- `profiles` — user info (username, avatar, email, team_id)
-- `user_roles` — separate roles table (manager, leader, sales, graphic)
-- `teams` — team name + leader reference
-- `daily_stats` — daily performance data per user (signups, deposits, ad spend, website, content link)
-- RLS policies ensuring sales users can only insert/view their own team's data; managers see everything
+### Changes in `src/pages/GraphicBriefs.tsx`:
+- Update the active brief card layout (lines 248-266) to display `request_date` formatted as DD-MM-YYYY alongside the time
+- Update the done brief card layout (lines 275-289) similarly
+- New format: `DD-MM-YYYY HH:mm | BriefType | SalesName -> DesignerName`
 
-## 3. Dashboard (Main Page)
-- **Global Filters** at the top:
-  - Date picker (defaults to yesterday)
-  - Team dropdown
-  - Sales name dropdown
-- **KPI Cards Row** — 11 metric cards calculated from filtered `daily_stats`:
-  - Total Signups, Total Depositors, % Conversion
-  - First Deposit, Total Deposit, Ad Spend
-  - Cost Per Head (rounded integer)
-  - Monthly Signups, Monthly Depositors, % Monthly Conversion
-  - Total Expenses (mocked for now)
-- **Dual Y-Axis Line Chart** (Recharts):
-  - Left Y-axis: Signups over time
-  - Right Y-axis: Total Deposit over time
-  - X-axis: Date
-- **Top Sales Leaderboard Table**:
-  - Ranked by signups
-  - Columns: Name, Signups, Cost Per Head, % Conversion
-  - Heatmap-style green background on conversion column
-- **Realtime updates** via Supabase Realtime — dashboard refreshes live when new data is entered
+---
 
-## 4. Daily Input Page
-- **Input Form** for `daily_stats`:
-  - Fields: Date, User (auto-filled for sales role), Signups, Deposits, First Deposit (THB), Total Deposit (THB), Ad Spend (USD), Website (MGB-USA / UNI-USA / MGB-X dropdown), Content Link
-  - Validation: all fields required, red border on empty fields
-  - Sales users can only submit for themselves
-- **History Table** below the form:
-  - Shows past entries filtered by logged-in user's team
-  - Sortable columns, date-filtered
+## Update 2: Assignment Submissions - Multi-Submit Fix
 
-## 5. Sidebar Navigation
-- Dashboard
-- Daily Input
-- User Management (visible to managers only)
-- Profile/Settings
-- Placeholder items for future features (Assignments, Graphic Briefs, Resources) — disabled/grayed out
+**Current state:** The `assignment_submissions` table has `UNIQUE (assignment_id, user_id)`, which blocks a Manager from submitting on behalf of multiple sales people. The `notes` field is being repurposed to store the `submitById` (sales member ID).
 
-## Future Phases (Not Built Now)
-- Assignments & submission tracking (you'll share specific flows)
-- Graphic Briefs workflow (queue → cutting → done → fix)
-- Resources library
+### Database Migration:
+1. Add a new `submitted_by_member_id` column (UUID, nullable, references `team_members`)
+2. Drop the existing unique constraint on `(assignment_id, user_id)`
+3. Add a new unique constraint on `(assignment_id, submitted_by_member_id)`
+
+```sql
+-- Add submitted_by_member_id column
+ALTER TABLE public.assignment_submissions
+ADD COLUMN submitted_by_member_id uuid REFERENCES public.team_members(id) ON DELETE SET NULL;
+
+-- Drop old unique constraint
+ALTER TABLE public.assignment_submissions
+DROP CONSTRAINT IF EXISTS assignment_submissions_assignment_id_user_id_key;
+
+-- Add new unique constraint
+ALTER TABLE public.assignment_submissions
+ADD CONSTRAINT assignment_submissions_assignment_id_submitted_by_key
+UNIQUE (assignment_id, submitted_by_member_id);
+```
+
+### Code Changes in `src/pages/Assignments.tsx`:
+1. **Save to proper column:** Update `handleSubmitProof` to write `submitById` into the new `submitted_by_member_id` column instead of `notes`
+2. **Duplicate warning:** After selecting a sales member in the Submit Proof modal, check if `submissions` already contains a record with matching `assignment_id` and `submitted_by_member_id`. If yes, show a red warning: "คนนี้ส่งงานแล้ว"
+3. **Disable submit button** when duplicate is detected
+4. **Update Submission interface** to include the new `submitted_by_member_id` field
+5. **Update submitter display** to show the sales member name instead of auth user name
+
+### Technical Details
+
+**Files modified:**
+- `src/pages/GraphicBriefs.tsx` - Queue card layout update
+- `src/pages/Assignments.tsx` - Submission logic + duplicate warning UI
+- New migration SQL for schema change
+
+**Submission duplicate check logic:**
+```tsx
+const isDuplicate = selectedAssignment && submitById
+  ? submissions.some(s => s.assignment_id === selectedAssignment.id && s.submitted_by_member_id === submitById)
+  : false;
+```
+
+**Warning UI in submit modal:**
+```tsx
+{isDuplicate && (
+  <p className="text-sm text-destructive font-medium">คนนี้ส่งงานแล้ว</p>
+)}
+```
 
