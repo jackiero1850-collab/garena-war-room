@@ -2,6 +2,7 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { getConvColor, getCostHeadColor, CONV_TOOLTIP, COST_HEAD_TOOLTIP } from "@/lib/metricColors";
 
 interface LeaderboardEntry {
   name: string;
@@ -9,12 +10,6 @@ interface LeaderboardEntry {
   costPerHead: number;
   conversion: number;
 }
-
-const getConversionColor = (value: number) => {
-  if (value >= 30) return "bg-warroom-success/30 text-warroom-success";
-  if (value >= 15) return "bg-warroom-success/15 text-warroom-success/80";
-  return "bg-muted text-muted-foreground";
-};
 
 const LeaderboardTable = ({ data }: { data: LeaderboardEntry[] }) => {
   return (
@@ -30,8 +25,8 @@ const LeaderboardTable = ({ data }: { data: LeaderboardEntry[] }) => {
             <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">#</TableHead>
             <TableHead className="text-xs uppercase tracking-wider text-muted-foreground">ชื่อ</TableHead>
             <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">สมัคร</TableHead>
-            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">ต้นทุน/หัว</TableHead>
-            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground">% คอนเวอร์ชั่น</TableHead>
+            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground" title={COST_HEAD_TOOLTIP}>ต้นทุน/หัว</TableHead>
+            <TableHead className="text-right text-xs uppercase tracking-wider text-muted-foreground" title={CONV_TOOLTIP}>% คอนเวอร์ชั่น</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -47,9 +42,9 @@ const LeaderboardTable = ({ data }: { data: LeaderboardEntry[] }) => {
                 <TableCell className="font-display text-primary">{i + 1}</TableCell>
                 <TableCell className="font-medium">{entry.name}</TableCell>
                 <TableCell className="text-right">{entry.signups}</TableCell>
-                <TableCell className="text-right">{entry.costPerHead}</TableCell>
+                <TableCell className={cn("text-right", getCostHeadColor(entry.costPerHead))}>฿{entry.costPerHead.toLocaleString()}</TableCell>
                 <TableCell className="text-right">
-                  <span className={cn("rounded px-2 py-0.5 text-xs font-medium", getConversionColor(entry.conversion))}>
+                  <span className={cn("rounded px-2 py-0.5 text-xs font-medium", getConvColor(entry.conversion))}>
                     {entry.conversion.toFixed(1)}%
                   </span>
                 </TableCell>

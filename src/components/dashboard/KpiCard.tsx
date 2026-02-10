@@ -7,9 +7,10 @@ interface KpiCardProps {
   icon: LucideIcon;
   subtitle?: string;
   highlight?: boolean;
+  valueClassName?: string;
 }
 
-const KpiCard = ({ title, value, icon: Icon, subtitle, highlight }: KpiCardProps) => {
+const KpiCard = ({ title, value, icon: Icon, subtitle, highlight, valueClassName }: KpiCardProps) => {
   return (
     <div
       className={cn(
@@ -20,7 +21,7 @@ const KpiCard = ({ title, value, icon: Icon, subtitle, highlight }: KpiCardProps
       <div className="flex items-start justify-between">
         <div className="space-y-1">
           <p className="text-xs uppercase tracking-wider text-muted-foreground">{title}</p>
-          <p className="font-display text-2xl text-foreground">{value}</p>
+          <p className={cn("font-display text-2xl text-foreground", valueClassName)}>{value}</p>
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
         </div>
         <div className="rounded border border-border bg-muted/50 p-2">
