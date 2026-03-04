@@ -12,51 +12,19 @@ const ResetPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [isValidSession, setIsValidSession] = useState(false);
-  const [checking, setChecking] = useState(true);
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    let mounted = true;
-
-    // Listen for PASSWORD_RECOVERY event (fired when user clicks email link)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (!mounted) return;
-      if (event === "PASSWORD_RECOVERY" && session) {
-        setIsValidSession(true);
-        setChecking(false);
-      }
-    });
-
-    // Also check current session + URL hash as fallback
     const checkSession = async () => {
-      // Give onAuthStateChange a moment to fire first
-      await new Promise((r) => setTimeout(r, 1500));
-      if (!mounted) return;
-
-      // Check if there's an active session (recovery link auto-signs in)
       const { data: { session } } = await supabase.auth.getSession();
-      if (!mounted) return;
-
       if (session) {
-        // Check URL hash for recovery type
-        const hash = window.location.hash;
-        if (hash.includes("type=recovery") || hash.includes("type=magiclink")) {
-          setIsValidSession(true);
-        } else {
-          // Session exists (possibly from recovery link that already processed)
-          setIsValidSession(true);
-        }
+        setHasSession(true);
+      } else {
+        setHasSession(false);
       }
-      setChecking(false);
     };
-
     checkSession();
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -79,20 +47,15 @@ const ResetPassword = () => {
     setLoading(false);
 
     if (error) {
-      if (error.message.includes("Auth session missing")) {
-        setError("เซสชันหมดอายุ กรุณากดลิงก์จากอีเมลใหม่อีกครั้ง");
-      } else {
-        setError(error.message);
-      }
+      setError(error.message);
     } else {
       setSuccess("เปลี่ยนรหัสผ่านสำเร็จ! กำลังกลับไปหน้าเข้าสู่ระบบ...");
-      // Sign out so they can log in fresh
       await supabase.auth.signOut();
       setTimeout(() => navigate("/login"), 3000);
     }
   };
 
-  if (checking) {
+  if (hasSession === null) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
@@ -100,16 +63,16 @@ const ResetPassword = () => {
     );
   }
 
-  if (!isValidSession) {
+  if (!hasSession) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="w-full max-w-md space-y-6 rounded-lg border border-border bg-card p-8 shadow-sm text-center">
-          <h1 className="text-2xl font-semibold text-foreground">ลิงก์ไม่ถูกต้องหรือหมดอายุ</h1>
+          <h1 className="text-2xl font-semibold text-foreground">เซสชันหมดอายุ</h1>
           <p className="text-sm text-muted-foreground">
-            กรุณากดลิงก์จากอีเมลใหม่อีกครั้ง หรือขอลิงก์รีเซ็ตรหัสผ่านใหม่
+            กรุณาเริ่มต้นใหม่จากหน้าลืมรหัสผ่าน
           </p>
           <Button onClick={() => navigate("/forgot-password")} className="h-12 w-full rounded-full text-base font-medium">
-            ขอลิงก์รีเซ็ตรหัสผ่านใหม่
+            ขอรหัส OTP ใหม่
           </Button>
         </div>
       </div>
