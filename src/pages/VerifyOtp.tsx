@@ -1,14 +1,13 @@
 import { useState } from "react";
-import { useLocation, useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { AlertCircle, ArrowLeft } from "lucide-react";
 
 const VerifyOtp = () => {
-  const location = useLocation();
   const navigate = useNavigate();
-  const email = (location.state as { email?: string })?.email || "";
+  const email = sessionStorage.getItem("otp_email") || "";
   const [otp, setOtp] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);

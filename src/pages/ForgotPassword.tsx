@@ -25,10 +25,8 @@ const ForgotPassword = () => {
     if (error) {
       setError(error.message);
     } else {
-      setSuccess("ระบบได้ส่งรหัส OTP ไปที่อีเมลของท่านแล้ว");
-      setTimeout(() => {
-        navigate("/verify-otp", { state: { email } });
-      }, 1500);
+      sessionStorage.setItem("otp_email", email);
+      navigate("/verify-otp");
     }
   };
 
