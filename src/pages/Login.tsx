@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -67,7 +67,7 @@ const Login = () => {
           {appLogoUrl && (
             <img src={appLogoUrl} alt={appName} className="mx-auto mb-4 h-16 w-16 rounded-lg object-cover" />
           )}
-          <h1 className="text-3xl font-semibold text-foreground">
+          <h1 className="text-center text-3xl font-semibold text-foreground">
             {isSignUp ? "สร้างบัญชี" : "ลงชื่อเข้าใช้"}
           </h1>
         </div>
@@ -133,7 +133,7 @@ const Login = () => {
         <div className="space-y-2 text-center text-sm text-muted-foreground">
           {!isSignUp && (
             <p>
-              ลืม <button type="button" className="font-medium text-primary hover:underline">รหัสผ่าน</button>?
+              <Link to="/forgot-password" className="font-medium text-primary hover:underline">ลืมรหัสผ่าน?</Link>
             </p>
           )}
           <p>
