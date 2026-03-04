@@ -17,6 +17,7 @@ import GraphicBriefs from "@/pages/GraphicBriefs";
 import Resources from "@/pages/Resources";
 import TeamPerformance from "@/pages/TeamPerformance";
 import ForgotPassword from "@/pages/ForgotPassword";
+import VerifyOtp from "@/pages/VerifyOtp";
 import ResetPassword from "@/pages/ResetPassword";
 import NotFound from "@/pages/NotFound";
 
@@ -53,6 +54,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
             <Route path="/forgot-password" element={<PublicRoute><ForgotPassword /></PublicRoute>} />
+            <Route path="/verify-otp" element={<PublicRoute><VerifyOtp /></PublicRoute>} />
             <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/daily-input" element={<ProtectedRoute><DailyInput /></ProtectedRoute>} />

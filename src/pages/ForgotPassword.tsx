@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,6 +11,7 @@ const ForgotPassword = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -18,15 +19,16 @@ const ForgotPassword = () => {
     setSuccess("");
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/reset-password",
-    });
+    const { error } = await supabase.auth.resetPasswordForEmail(email);
 
     setLoading(false);
     if (error) {
       setError(error.message);
     } else {
-      setSuccess("ระบบได้ส่งลิงก์ไปที่อีเมลของท่านแล้ว โปรดตรวจสอบกล่องจดหมาย");
+      setSuccess("ระบบได้ส่งรหัส OTP ไปที่อีเมลของท่านแล้ว");
+      setTimeout(() => {
+        navigate("/verify-otp", { state: { email } });
+      }, 1500);
     }
   };
 
@@ -36,7 +38,7 @@ const ForgotPassword = () => {
         <div className="text-center">
           <h1 className="text-3xl font-semibold text-foreground">ลืมรหัสผ่าน</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            กรอกอีเมลของคุณเพื่อรับลิงก์รีเซ็ตรหัสผ่าน
+            กรอกอีเมลของคุณเพื่อรับรหัส OTP สำหรับรีเซ็ตรหัสผ่าน
           </p>
         </div>
 
@@ -71,7 +73,7 @@ const ForgotPassword = () => {
           )}
 
           <Button type="submit" disabled={loading} className="h-12 w-full rounded-full text-base font-medium">
-            {loading ? "กำลังส่ง..." : "ส่งลิงก์รีเซ็ตรหัสผ่าน"}
+            {loading ? "กำลังส่ง..." : "ส่งรหัส OTP"}
           </Button>
         </form>
 
