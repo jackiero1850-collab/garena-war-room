@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Crosshair, AlertCircle, CheckCircle2 } from "lucide-react";
+import { AlertCircle, CheckCircle2 } from "lucide-react";
 
 const Login = () => {
   const [isSignUp, setIsSignUp] = useState(false);
@@ -14,7 +14,7 @@ const Login = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
-  const [appName, setAppName] = useState("WAR ROOM");
+  const [appName, setAppName] = useState("ลงชื่อเข้าใช้");
   const [appLogoUrl, setAppLogoUrl] = useState("");
   const { signIn } = useAuth();
   const navigate = useNavigate();
@@ -46,7 +46,7 @@ const Login = () => {
       if (error) {
         setError(error.message);
       } else {
-        setSuccess("Check your email to confirm your account, then log in.");
+        setSuccess("กรุณาตรวจสอบอีเมลเพื่อยืนยันบัญชี แล้วลงชื่อเข้าใช้");
       }
     } else {
       const { error } = await signIn(email, password);
@@ -61,93 +61,92 @@ const Login = () => {
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background">
-      <div className="w-full max-w-md space-y-8 p-8">
-        {/* Logo */}
-        <div className="text-center">
-          {appLogoUrl ? (
-            <img src={appLogoUrl} alt={appName} className="mx-auto h-16 w-16 rounded border border-primary/50 object-cover glow-red" />
-          ) : (
-            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded border border-primary/50 bg-primary/10 glow-red">
-              <Crosshair className="h-8 w-8 text-primary" />
-            </div>
+      <div className="w-full max-w-md space-y-6 p-8">
+        {/* Header */}
+        <div>
+          {appLogoUrl && (
+            <img src={appLogoUrl} alt={appName} className="mx-auto mb-4 h-16 w-16 rounded-lg object-cover" />
           )}
-          <h1 className="mt-4 font-display text-3xl tracking-wider text-foreground">
-            {appName}
+          <h1 className="text-3xl font-semibold text-foreground">
+            {isSignUp ? "สร้างบัญชี" : "ลงชื่อเข้าใช้"}
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Marketing Operations Platform
-          </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="rounded border border-border bg-card p-6 space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="email" className="text-xs uppercase tracking-wider text-muted-foreground">
-                Email
-              </Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="operator@warroom.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                className="border-border bg-muted/50 focus:border-primary"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="password" className="text-xs uppercase tracking-wider text-muted-foreground">
-                Password
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                minLength={6}
-                className="border-border bg-muted/50 focus:border-primary"
-              />
-            </div>
-
-            {error && (
-              <div className="flex items-center gap-2 rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
-                <AlertCircle className="h-4 w-4 shrink-0" />
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="flex items-center gap-2 rounded border border-warroom-success/50 bg-warroom-success/10 p-3 text-sm text-warroom-success">
-                <CheckCircle2 className="h-4 w-4 shrink-0" />
-                {success}
-              </div>
-            )}
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-primary font-display text-sm uppercase tracking-widest hover:bg-primary/90 glow-red-sm"
-            >
-              {loading
-                ? isSignUp ? "Creating Account..." : "Authenticating..."
-                : isSignUp ? "Create Account" : "Enter War Room"}
-            </Button>
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div className="space-y-2">
+            <Label htmlFor="email" className="text-sm text-muted-foreground">
+              อีเมล <span className="text-primary">*</span>
+            </Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="email@example.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              className="h-12 rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus:border-primary"
+            />
           </div>
+          <div className="space-y-2">
+            <Label htmlFor="password" className="text-sm text-muted-foreground">
+              รหัสผ่าน <span className="text-primary">*</span>
+            </Label>
+            <Input
+              id="password"
+              type="password"
+              placeholder="••••••••"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              required
+              minLength={6}
+              className="h-12 rounded-lg border-border bg-card text-foreground placeholder:text-muted-foreground focus:border-primary"
+            />
+          </div>
+
+          {error && (
+            <div className="flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <AlertCircle className="h-4 w-4 shrink-0" />
+              {error}
+            </div>
+          )}
+
+          {success && (
+            <div className="flex items-center gap-2 rounded-lg border border-warroom-success/30 bg-warroom-success/5 p-3 text-sm text-warroom-success">
+              <CheckCircle2 className="h-4 w-4 shrink-0" />
+              {success}
+            </div>
+          )}
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="h-12 w-full rounded-full text-base font-medium"
+          >
+            {loading
+              ? isSignUp ? "กำลังสร้างบัญชี..." : "กำลังเข้าสู่ระบบ..."
+              : isSignUp ? "สร้างบัญชี" : "เข้าสู่ระบบ"}
+          </Button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          {isSignUp ? "Already have an account?" : "Don't have an account?"}{" "}
-          <button
-            type="button"
-            onClick={() => { setIsSignUp(!isSignUp); setError(""); setSuccess(""); }}
-            className="font-medium text-primary hover:underline"
-          >
-            {isSignUp ? "Sign In" : "Sign Up"}
-          </button>
-        </p>
+        {/* Links */}
+        <div className="space-y-2 text-center text-sm text-muted-foreground">
+          {!isSignUp && (
+            <p>
+              ลืม <button type="button" className="font-medium text-primary hover:underline">รหัสผ่าน</button>?
+            </p>
+          )}
+          <p>
+            {isSignUp ? "มีบัญชีอยู่แล้ว?" : "ยังไม่มีบัญชีใช่หรือไม่?"}{" "}
+            <button
+              type="button"
+              onClick={() => { setIsSignUp(!isSignUp); setError(""); setSuccess(""); }}
+              className="font-medium text-primary hover:underline"
+            >
+              {isSignUp ? "ลงชื่อเข้าใช้" : "สร้างบัญชี"}
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
